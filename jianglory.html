@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>한글 놀이터</title>
+    <style>
+        @font-face {
+            font-family: 'Ownglyph_ryuttung-batang-체';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2406_1@1.0/Ownglyph_ryuttung-batang-체.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'Ownglyph_ryuttung-batang-체', cursive;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            flex-direction: column;
+            overflow: hidden;
+            color: #5d4037;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #start-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 1.5s ease-in-out;
+            background-image: url('https://cdn.pixabay.com/photo/2017/02/08/21/59/night-sky-2049564_1280.jpg'); /* 외계 행성 밤하늘 느낌 (예시) */
+            background-size: cover;
+            background-position: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        #start-page h1 {
+            font-size: 8vw;
+            color: #ff6347;
+            text-shadow: 4px 4px 0px #fff;
+            animation: bounceIn 1.5s ease-in-out;
+            margin-bottom: 20px;
+        }
+        
+        #character {
+            width: 50vw;
+            max-width: 300px;
+            margin-bottom: 30px;
+        }
+
+        .menu-button {
+            width: 70vw;
+            max-width: 400px;
+            padding: 3vw;
+            margin: 2vw;
+            font-size: 4vw;
+            font-weight: bold;
+            color: #fff;
+            border: 5px solid #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .menu-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        #consonant-btn { background-color: #ff8e72; }
+        #vowel-btn { background-color: #72c3ff; }
+        #word-btn { background-color: #a788ff; }
+
+        #learning-page {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            animation: fadeIn 1.5s ease-in-out;
+            position: relative;
+            background-color: #ffe4e1;
+        }
+
+        #learning-page h2 {
+            font-size: 6vw;
+            color: #d2691e;
+            text-shadow: 2px 2px 0 #fff;
+            margin-bottom: 2vh;
+        }
+
+        #drawing-area {
+            position: relative;
+            width: 80vw;
+            height: 50vh;
+            max-width: 600px;
+            max-height: 400px;
+            border: 5px dashed #d2691e;
+            border-radius: 15px;
+            background-color: #fff8f5;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+        }
+
+        #guide-char {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40vw;
+            color: rgba(210, 105, 30, 0.2);
+            user-select: none;
+            pointer-events: none;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-around;
+            width: 80vw;
+            max-width: 600px;
+            margin-top: 3vh;
+        }
+
+        .nav-btn {
+            padding: 2.5vw 5vw;
+            font-size: 3vw;
+            border-radius: 20px;
+            border: none;
+            color: #fff;
+            background-color: #ff8e72;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
+        #word-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2vh;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        #word-image {
+            width: 25vw;
+            max-width: 150px;
+            height: auto;
+            border-radius: 10px;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            margin-bottom: 1vh;
+            cursor: pointer;
+        }
+
+        #word-text {
+            font-size: 4vw;
+            font-weight: bold;
+            color: #d2691e;
+            cursor: pointer;
+        }
+
+        #back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 1vw 2vw;
+            font-size: 2.5vw;
+            border-radius: 15px;
+            border: none;
+            color: #fff;
+            background-color: #6c757d;
+            cursor: pointer;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        #back-btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @media (min-width: 768px) {
+            #start-page h1 { font-size: 60px; }
+            #character { width: 250px; margin-bottom: 40px; }
+            .menu-button { padding: 20px; font-size: 30px; margin: 15px; }
+            #learning-page h2 { font-size: 50px; }
+            #guide-char { font-size: 300px; }
+            .nav-btn { font-size: 24px; padding: 15px 30px; }
+            #word-image { width: 120px; }
+            #word-text { font-size: 30px; }
+            #back-btn { top: 30px; left: 30px; padding: 8px 16px; font-size: 18px; border-radius: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div id="start-page">
+            <h1>한글 놀이터</h1>
+            <img id="character" src="https://em-content.zobj.net/source/apple/354/unicorn_1f984.png" alt="한글 요정">
+            <button id="consonant-btn" class="menu-button">자음 배우기</button>
+            <button id="vowel-btn" class="menu-button">모음 배우기</button>
+            <button id="word-btn" class="menu-button">글자 배우기</button>
+        </div>
+
+        <div id="learning-page">
+            <button id="back-btn">뒤로 가기</button>
+            <h2 id="current-title">자음 배우기</h2>
+            <div id="drawing-area">
+                <div id="guide-char"></div>
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+            <div id="word-info">
+                <img id="word-image" src="" alt="">
+                <div id="word-text"></div>
+            </div>
+            <div class="navigation-buttons">
+                <button id="prev-btn" class="nav-btn">이전</button>
+                <button id="next-btn" class="nav-btn">다음</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appContainer = document.getElementById('app-container');
+        const startPage = document.getElementById('start-page');
+        const learningPage = document.getElementById('learning-page');
+        const consonantBtn = document.getElementById('consonant-btn');
+        const vowelBtn = document.getElementById('vowel-btn');
+        const wordBtn = document.getElementById('word-btn');
+        const currentTitle = document.getElementById('current-title');
+        const guideChar = document.getElementById('guide-char');
+        const canvas = document.getElementById('drawing-canvas');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const wordInfo = document.getElementById('word-info');
+        const wordImage = document.getElementById('word-image');
+        const wordText = document.getElementById('word-text');
+        const backBtn = document.getElementById('back-btn');
+
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const charSets = {
+            consonant: ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'],
+            vowel: ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'],
+            word: [
+                { char: '가', word: '가방', img: 'https://cdn.pixabay.com/photo/2016/09/16/17/33/bag-1674482_1280.png' },
+                { char: '나', word: '나비', img: 'https://cdn.pixabay.com/photo/2016/08/17/23/04/butterfly-1601666_1280.png' },
+                { char: '다', word: '다리', img: 'https://cdn.pixabay.com/photo/2017/04/04/18/14/bridge-2202271_1280.png' },
+                { char: '라', word: '라면', img: 'https://cdn.pixabay.com/photo/2020/05/20/09/27/noodle-5196328_1280.png' }
+            ]
+        };
+
+        let currentMode = '';
+        let currentIndex = 0;
+
+        function playSound(text) {
+            if ('speechSynthesis' in window) {
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                const voices = speechSynthesis.getVoices();
+                const koreanVoice = voices.find(voice => voice.lang === 'ko-KR' || voice.lang === 'ko_KR');
+                if (koreanVoice) {
+                    utterance.voice = koreanVoice;
+                }
+                utterance.rate = 0.8;
+                utterance.pitch = 1.0;
+                speechSynthesis.speak(utterance);
+            } else {
+                alert("죄송해요, 이 브라우저에서는 음성 합성 기능을 지원하지 않습니다. ㅠㅠ");
+            }
+        }
+
+        function switchPage(page) {
+            if (page === 'start') {
+                startPage.style.display = 'flex';
+                learningPage.style.display = 'none';
+            } else {
+                startPage.style.display = 'none';
+                learningPage.style.display = 'flex';
+            }
+        }
+
+        function initCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 15;
+            ctx.strokeStyle = '#ff6347';
+        }
+
+        function setupLearning(mode) {
+            currentMode = mode;
+            currentIndex = 0;
+            updateUI();
+            switchPage('learning');
+        }
+
+        function updateUI() {
+            let currentData;
+            if (currentMode === 'consonant' || currentMode === 'vowel') {
+                const char = charSets.consonant.includes(charSets.vowel) ? charSets.vowel : charSets.consonant;
+                const currentChar = charSets.consonant.includes(char) ? charSets.consonant : (charSets.vowel.includes(char) ? charSets.vowel : null);
+
+                if (currentMode === 'consonant' || currentMode === 'vowel') {
+                    const char = charSets.consonant.includes(charSets.vowel) ? charSets.vowel : charSets.consonant;
+                    const currentChar = charSets.consonant.includes(charSets.consonant) ? charSets.consonant : (charSets.vowel.includes(charSets.vowel) ? charSets.vowel : null);
+                    const currentSet = currentMode === 'consonant' ? charSets.consonant : charSets.vowel;
+                    const char = currentSet ? currentSet : '';
+                    const currentChar = currentSet ? currentSet : '';
+
+                    if (currentMode === 'consonant' || currentMode === 'vowel') {
+                        const currentSet = currentMode === 'consonant' ? charSets.consonant : charSets.vowel;
+                        const char = currentSet ? currentSet : '';
+                        const currentChar = currentSet ? currentSet : '';
+
+                        const displayChar = currentSet ? currentSet : '';
+                        currentTitle.textContent = `${displayChar} 배우기`;
+                        guideChar.textContent = displayChar;
+                        wordInfo.style.opacity = 0;
+                        playSound(displayChar);
+                    }
+                }
+                 else if (currentMode === 'word') {
+                    currentData = charSets.word.length > 0 ? charSets.word : null;
+                    const displayChar = currentData && currentData.length > 0 ? currentData : '';
+                    if (displayChar) {
+                        currentTitle.textContent = `${displayChar} 쓰기`;
+                        guideChar.textContent = displayChar;
+                        wordImage.src = currentData.img;
+                        wordText.textContent = currentData.word;
+                        wordInfo.style.opacity = 1;
+                        playSound(currentData.char);
+                    }
+                }
+            } else if (currentMode === 'word') {
+                currentData = charSets.word.length > 0 ? charSets.word : null;
+                const displayChar = currentData && currentData.length > 0 ? currentData : '';
+                if (displayChar) {
+                    currentTitle.textContent = `${displayChar.char} 쓰기`;
+                    guideChar.textContent = displayChar.char;
+                    wordImage.src = displayChar.img;
+                    wordText.textContent = displayChar.word;
+                    wordInfo.style.opacity = 1;
+                    playSound(displayChar.char);
+                }
+            }
+            initCanvas();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            if (!e.touches) {
+                lastX = e.offsetX;
+                lastY = e.offsetY;
+            }
+        }
+
+        function getTouchPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches.length > 0 ? e.touches.item(0) : null : null;
+            return touch ? {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            } : null;
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            let pos;
+            if (e.touches) {
+                e.preventDefault();
+                pos = getTouchPos(e);
+                if (pos) {
+                    lastX = pos.x;
+                    lastY = pos.y;
+                }
+            } else {
+                lastX = e.offsetX;
+                lastY = e.offsetY;
+            }
+        }
+
+        function endDrawing() {
+            isDrawing = false;
+        }
+
+        function moveDrawing(e) {
+            if (!isDrawing) return;
+            let pos;
+            if (e.touches) {
+                e.preventDefault();
+                pos = getTouchPos(e);
+                if (pos) {
+                    draw({ offsetX: pos.x, offsetY: pos.y });
+                }
+            } else {
+                draw(e);
+            }
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', endDrawing);
+        canvas.addEventListener('mouseout', endDrawing);
+
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', moveDrawing, { passive: false });
+        canvas.addEventListener('touchend', endDrawing);
+
+        consonantBtn.addEventListener('click', () => setupLearning('consonant'));
+        vowelBtn.addEventListener('click', () => setupLearning('vowel'));
+        wordBtn.addEventListener('click', () => setupLearning('word'));
+        backBtn.addEventListener('click', () => switchPage('start'));
+
+        nextBtn.addEventListener('click', () => {
+            let currentSet = charSets[(currentMode === 'consonant' || currentMode === 'vowel') ? currentMode : 'word'];
+            if (currentMode === 'word') {
+                currentIndex = (currentIndex + 1) % currentSet.length;
+            } else {
+                const keys = Object.keys(charSets);
+                const currentKey = keys.find(key => charSets[(key === 'consonant' || key === 'vowel') ? key : 'word'] === currentSet);
+                if (currentKey) {
+                    currentIndex = (currentIndex + 1) % charSets[(currentKey === 'consonant' || currentKey === 'vowel') ? currentKey : 'word'].length;
+                }
+            }
+            updateUI();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            let currentSet = charSets[(currentMode === 'consonant' || currentMode === 'vowel') ? currentMode : 'word'];
+            if (currentMode === 'word') {
+                currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
+            } else {
+                const keys = Object.keys(charSets);
+                const currentKey = keys.find(key => charSets[(key === 'consonant' || key === 'vowel') ? key : 'word'] === currentSet);
+                if (currentKey) {
+                    currentIndex = (currentIndex - 1 + charSets[(currentKey === 'consonant' || currentKey === 'vowel') ? currentKey : 'word'].length) % charSets[(currentKey === 'consonant' || currentKey === 'vowel') ? currentKey : 'word'].length;
+                }
+            }
+            updateUI();
+        });
+
+        wordImage.addEventListener('click', () => {
+            if (currentMode === 'word' && charSets.word.length > 0) {
+                playSound(charSets.word.length > 0 ? charSets.word : '');
+            }
+        });
+
+        wordText.addEventListener('click', () => {
+            if (currentMode === 'word' && charSets.word.length > 0) {
+                playSound(charSets.word.length > 0 ? charSets.word : '');
+            }
+        });
+
+        function initializeSpeechSynthesis() {
+            return new Promise((resolve) => {
+                speechSynthesis.onvoiceschanged = resolve;
+            });
+        }
+
+        (async () => {
+            await initializeSpeechSynthesis();
+        })();
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+    </script>
+</body>
+</html>
