@@ -40,7 +40,7 @@
             justify-content: center;
             align-items: center;
             animation: fadeIn 1.5s ease-in-out;
-            background-image: url('https://cdn.pixabay.com/photo/2017/02/08/21/59/night-sky-2049564_1280.jpg'); /* 외계 행성 밤하늘 느낌 (예시) */
+            background-image: url('https://cdn.pixabay.com/photo/2017/02/08/21/59/night-sky-2049564_1280.jpg');
             background-size: cover;
             background-position: center;
             width: 100%;
@@ -293,8 +293,27 @@
 
         let currentMode = '';
         let currentIndex = 0;
+        let speechSynthInitialized = false;
+
+        function initializeSpeechSynth() {
+            return new Promise((resolve) => {
+                if (speechSynthesis.onvoiceschanged !== undefined) {
+                    speechSynthesis.onvoiceschanged = () => {
+                        speechSynthInitialized = true;
+                        resolve();
+                    };
+                } else {
+                    speechSynthInitialized = true;
+                    resolve();
+                }
+            });
+        }
 
         function playSound(text) {
+            if (!speechSynthInitialized) {
+                console.warn("Speech synthesis not initialized.");
+                return;
+            }
             if ('speechSynthesis' in window) {
                 if (speechSynthesis.speaking) {
                     speechSynthesis.cancel();
@@ -343,89 +362,62 @@
         function updateUI() {
             let currentData;
             if (currentMode === 'consonant' || currentMode === 'vowel') {
-                const char = charSets.consonant.includes(charSets.vowel) ? charSets.vowel : charSets.consonant;
-                const currentChar = charSets.consonant.includes(char) ? charSets.consonant : (charSets.vowel.includes(char) ? charSets.vowel : null);
-
-                if (currentMode === 'consonant' || currentMode === 'vowel') {
-                    const char = charSets.consonant.includes(charSets.vowel) ? charSets.vowel : charSets.consonant;
-                    const currentChar = charSets.consonant.includes(charSets.consonant) ? charSets.consonant : (charSets.vowel.includes(charSets.vowel) ? charSets.vowel : null);
-                    const currentSet = currentMode === 'consonant' ? charSets.consonant : charSets.vowel;
-                    const char = currentSet ? currentSet : '';
-                    const currentChar = currentSet ? currentSet : '';
-
-                    if (currentMode === 'consonant' || currentMode === 'vowel') {
-                        const currentSet = currentMode === 'consonant' ? charSets.consonant : charSets.vowel;
-                        const char = currentSet ? currentSet : '';
-                        const currentChar = currentSet ? currentSet : '';
-
-                        const displayChar = currentSet ? currentSet : '';
-                        currentTitle.textContent = `${displayChar} 배우기`;
-                        guideChar.textContent = displayChar;
-                        wordInfo.style.opacity = 0;
-                        playSound(displayChar);
-                    }
-                }
-                 else if (currentMode === 'word') {
-                    currentData = charSets.word.length > 0 ? charSets.word : null;
-                    const displayChar = currentData && currentData.length > 0 ? currentData : '';
-                    if (displayChar) {
-                        currentTitle.textContent = `${displayChar} 쓰기`;
-                        guideChar.textContent = displayChar;
-                        wordImage.src = currentData.img;
-                        wordText.textContent = currentData.word;
-                        wordInfo.style.opacity = 1;
-                        playSound(currentData.char);
-                    }
-                }
+                const currentSet = currentMode === 'consonant' ? charSets.consonant : charSets.vowel;
+                const char = currentSet[currentIndex];
+                currentTitle.textContent = `${char} 배우기`;
+                guideChar.textContent = char;
+                wordInfo.style.opacity = 0;
+                playSound(char); 
             } else if (currentMode === 'word') {
-                currentData = charSets.word.length > 0 ? charSets.word : null;
-                const displayChar = currentData && currentData.length > 0 ? currentData : '';
-                if (displayChar) {
-                    currentTitle.textContent = `${displayChar.char} 쓰기`;
-                    guideChar.textContent = displayChar.char;
-                    wordImage.src = displayChar.img;
-                    wordText.textContent = displayChar.word;
-                    wordInfo.style.opacity = 1;
-                    playSound(displayChar.char);
-                }
+                currentData = charSets.word[currentIndex];
+                currentTitle.textContent = `${currentData.char} 쓰기`;
+                guideChar.textContent = currentData.char;
+                wordImage.src = currentData.img;
+                wordText.textContent = currentData.word;
+                wordInfo.style.opacity = 1;
+                playSound(currentData.char); 
             }
             initCanvas();
         }
 
         function draw(e) {
             if (!isDrawing) return;
+            let x, y;
+            if (e.touches) {
+                const pos = getTouchPos(e);
+                if (!pos) return;
+                x = pos.x;
+                y = pos.y;
+            } else {
+                x = e.offsetX;
+                y = e.offsetY;
+            }
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.lineTo(x, y);
             ctx.stroke();
-            if (!e.touches) {
-                lastX = e.offsetX;
-                lastY = e.offsetY;
-            }
+            [lastX, lastY] = [x, y];
         }
 
         function getTouchPos(e) {
             const rect = canvas.getBoundingClientRect();
-            const touch = e.touches ? e.touches.length > 0 ? e.touches.item(0) : null : null;
-            return touch ? {
+            const touch = e.touches[0];
+            return {
                 x: touch.clientX - rect.left,
                 y: touch.clientY - rect.top
-            } : null;
+            };
         }
 
         function startDrawing(e) {
             isDrawing = true;
-            let pos;
             if (e.touches) {
                 e.preventDefault();
-                pos = getTouchPos(e);
+                const pos = getTouchPos(e);
                 if (pos) {
-                    lastX = pos.x;
-                    lastY = pos.y;
+                    [lastX, lastY] = [pos.x, pos.y];
                 }
             } else {
-                lastX = e.offsetX;
-                lastY = e.offsetY;
+                [lastX, lastY] = [e.offsetX, e.offsetY];
             }
         }
 
@@ -435,20 +427,12 @@
 
         function moveDrawing(e) {
             if (!isDrawing) return;
-            let pos;
-            if (e.touches) {
-                e.preventDefault();
-                pos = getTouchPos(e);
-                if (pos) {
-                    draw({ offsetX: pos.x, offsetY: pos.y });
-                }
-            } else {
-                draw(e);
-            }
+            e.preventDefault();
+            draw(e);
         }
 
         canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mousemove', moveDrawing);
         canvas.addEventListener('mouseup', endDrawing);
         canvas.addEventListener('mouseout', endDrawing);
 
@@ -462,54 +446,32 @@
         backBtn.addEventListener('click', () => switchPage('start'));
 
         nextBtn.addEventListener('click', () => {
-            let currentSet = charSets[(currentMode === 'consonant' || currentMode === 'vowel') ? currentMode : 'word'];
-            if (currentMode === 'word') {
-                currentIndex = (currentIndex + 1) % currentSet.length;
-            } else {
-                const keys = Object.keys(charSets);
-                const currentKey = keys.find(key => charSets[(key === 'consonant' || key === 'vowel') ? key : 'word'] === currentSet);
-                if (currentKey) {
-                    currentIndex = (currentIndex + 1) % charSets[(currentKey === 'consonant' || currentKey === 'vowel') ? currentKey : 'word'].length;
-                }
-            }
+            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : charSets.word);
+            currentIndex = (currentIndex + 1) % currentSet.length;
             updateUI();
         });
 
         prevBtn.addEventListener('click', () => {
-            let currentSet = charSets[(currentMode === 'consonant' || currentMode === 'vowel') ? currentMode : 'word'];
-            if (currentMode === 'word') {
-                currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
-            } else {
-                const keys = Object.keys(charSets);
-                const currentKey = keys.find(key => charSets[(key === 'consonant' || key === 'vowel') ? key : 'word'] === currentSet);
-                if (currentKey) {
-                    currentIndex = (currentIndex - 1 + charSets[(currentKey === 'consonant' || currentKey === 'vowel') ? currentKey : 'word'].length) % charSets[(currentKey === 'consonant' || currentKey === 'vowel') ? currentKey : 'word'].length;
-                }
-            }
+            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : charSets.word);
+            currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             updateUI();
         });
 
         wordImage.addEventListener('click', () => {
-            if (currentMode === 'word' && charSets.word.length > 0) {
-                playSound(charSets.word.length > 0 ? charSets.word : '');
+            if (currentMode === 'word') {
+                playSound(charSets.word[currentIndex].word);
             }
         });
 
         wordText.addEventListener('click', () => {
-            if (currentMode === 'word' && charSets.word.length > 0) {
-                playSound(charSets.word.length > 0 ? charSets.word : '');
+            if (currentMode === 'word') {
+                playSound(charSets.word[currentIndex].word);
             }
         });
-
-        function initializeSpeechSynthesis() {
-            return new Promise((resolve) => {
-                speechSynthesis.onvoiceschanged = resolve;
-            });
-        }
-
-        (async () => {
-            await initializeSpeechSynthesis();
-        })();
+        
+        initializeSpeechSynth().then(() => {
+            console.log("Speech synthesis ready.");
+        });
 
         window.addEventListener('resize', initCanvas);
         initCanvas();
