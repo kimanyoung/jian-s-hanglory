@@ -231,3 +231,604 @@
 
         @keyframes fadeIn {
             from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @media (min-width: 768px) {
+            #start-page h1 { font-size: 60px; }
+            #character { width: 250px; margin-bottom: 40px; }
+            .menu-button { padding: 20px; font-size: 30px; margin: 15px; }
+            #learning-page h2 { font-size: 50px; }
+            #guide-char { font-size: 300px; }
+            .nav-btn, #back-btn { font-size: 24px; padding: 15px 30px; }
+            #word-image { width: 120px; }
+            #word-text { font-size: 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div id="start-page">
+            <h1>한글 놀이터</h1>
+            <img id="character" src="https://em-content.zobj.net/source/apple/354/unicorn_1f984.png" alt="한글 요정">
+            <button id="consonant-btn" class="menu-button">자음 배우기</button>
+            <button id="vowel-btn" class="menu-button">모음 배우기</button>
+            <button id="word-btn" class="menu-button">글자 배우기</button>
+        </div>
+
+        <div id="learning-page">
+            <h2 id="current-title">자음 배우기</h2>
+            <div id="drawing-area">
+                <div id="stroke-guide-container"></div>
+                <div id="guide-char"></div>
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+            <div id="word-info">
+                <img id="word-image" src="" alt="">
+                <div id="word-text"></div>
+            </div>
+            <div class="navigation-buttons">
+                <button id="prev-btn" class="nav-btn">이전</button>
+                <button id="next-btn" class="nav-btn">다음</button>
+                <button id="back-btn">뒤로 가기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appContainer = document.getElementById('app-container');
+        const startPage = document.getElementById('start-page');
+        const learningPage = document.getElementById('learning-page');
+        const consonantBtn = document.getElementById('consonant-btn');
+        const vowelBtn = document.getElementById('vowel-btn');
+        const wordBtn = document.getElementById('word-btn');
+        const currentTitle = document.getElementById('current-title');
+        const guideChar = document.getElementById('guide-char');
+        const canvas = document.getElementById('drawing-canvas');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const wordInfo = document.getElementById('word-info');
+        const wordImage = document.getElementById('word-image');
+        const wordText = document.getElementById('word-text');
+        const backBtn = document.getElementById('back-btn');
+        const strokeGuideContainer = document.getElementById('stroke-guide-container');
+
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let speechSynthInitialized = false;
+        let isFirstTouchHandled = false;
+
+        const CHOSUNG_START_CODE = 0x1100;
+        const JUNGSUNG_START_CODE = 0x1161;
+        const JONGSUNG_START_CODE = 0x11a7;
+        const HANGUL_START_CODE = 0xac00;
+
+        const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
+        const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
+        
+        let dynamicWordSet = [];
+
+        const strokeOrderData = {
+            'ㄱ': [
+                { top: 40, left: 30, rotate: -3, delay: 0 },
+                { top: 40, left: 55, rotate: 90, delay: 1000 }
+            ],
+            'ㄴ': [
+                { top: 50, left: 30, rotate: -3, delay: 0 },
+                { top: 50, left: 30, rotate: 180, delay: 1000 }
+            ],
+            'ㄷ': [
+                { top: 40, left: 30, rotate: -3, delay: 0 },
+                { top: 40, left: 55, rotate: 90, delay: 1000 },
+                { top: 70, left: 55, rotate: -3, delay: 2000 }
+            ],
+            'ㄹ': [
+                { top: 40, left: 30, rotate: -3, delay: 0 },
+                { top: 40, left: 55, rotate: 90, delay: 700 },
+                { top: 55, left: 30, rotate: -3, delay: 1400 },
+                { top: 55, left: 55, rotate: 90, delay: 2100 },
+                { top: 70, left: 30, rotate: -3, delay: 2800 }
+            ],
+            'ㅁ': [
+                { top: 40, left: 30, rotate: -3, delay: 0 },
+                { top: 40, left: 55, rotate: 90, delay: 700 },
+                { top: 40, left: 55, rotate: 180, delay: 1400 },
+                { top: 70, left: 55, rotate: -90, delay: 2100 }
+            ],
+            'ㅂ': [
+                { top: 40, left: 30, rotate: 90, delay: 0 },
+                { top: 40, left: 55, rotate: 90, delay: 700 },
+                { top: 55, left: 30, rotate: -3, delay: 1400 },
+                { top: 55, left: 55, rotate: -3, delay: 2100 }
+            ],
+            'ㅅ': [
+                { top: 50, left: 45, rotate: 45, delay: 0 },
+                { top: 50, left: 45, rotate: -45, delay: 700 }
+            ],
+            'ㅇ': [
+                { top: 50, left: 50, rotate: 0, delay: 0 }
+            ],
+            'ㅈ': [
+                { top: 40, left: 45, rotate: 0, delay: 0 },
+                { top: 50, left: 38, rotate: 45, delay: 700 },
+                { top: 50, left: 58, rotate: -45, delay: 1400 }
+            ],
+            'ㅊ': [
+                { top: 35, left: 45, rotate: 0, delay: 0 },
+                { top: 40, left: 38, rotate: 45, delay: 700 },
+                { top: 40, left: 58, rotate: -45, delay: 1400 },
+                { top: 60, left: 50, rotate: 90, delay: 2100 }
+            ],
+            'ㅋ': [
+                { top: 35, left: 30, rotate: -3, delay: 0 },
+                { top: 50, left: 30, rotate: -3, delay: 700 },
+                { top: 50, left: 55, rotate: 90, delay: 1400 }
+            ],
+            'ㅌ': [
+                { top: 30, left: 30, rotate: -3, delay: 0 },
+                { top: 45, left: 30, rotate: -3, delay: 700 },
+                { top: 45, left: 55, rotate: 90, delay: 1400 },
+                { top: 60, left: 30, rotate: -3, delay: 2100 }
+            ],
+            'ㅍ': [
+                { top: 40, left: 30, rotate: -3, delay: 0 },
+                { top: 40, left: 55, rotate: -3, delay: 700 },
+                { top: 40, left: 30, rotate: 90, delay: 1400 },
+                { top: 40, left: 55, rotate: 90, delay: 2100 }
+            ],
+            'ㅎ': [
+                { top: 35, left: 45, rotate: 0, delay: 0 },
+                { top: 50, left: 45, rotate: 0, delay: 700 },
+                { top: 55, left: 50, rotate: 0, delay: 1400 }
+            ],
+            'ㄲ': [
+                { top: 40, left: 25, rotate: -3, delay: 0 },
+                { top: 40, left: 45, rotate: 90, delay: 700 },
+                { top: 40, left: 50, rotate: -3, delay: 1400 },
+                { top: 40, left: 70, rotate: 90, delay: 2100 }
+            ],
+            'ㄸ': [
+                { top: 35, left: 25, rotate: -3, delay: 0 },
+                { top: 35, left: 45, rotate: 90, delay: 700 },
+                { top: 35, left: 50, rotate: -3, delay: 1400 },
+                { top: 35, left: 70, rotate: 90, delay: 2100 },
+                { top: 65, left: 45, rotate: -3, delay: 2800 }
+            ],
+            'ㅃ': [
+                { top: 35, left: 25, rotate: 90, delay: 0 },
+                { top: 35, left: 45, rotate: 90, delay: 700 },
+                { top: 50, left: 25, rotate: -3, delay: 1400 },
+                { top: 50, left: 45, rotate: -3, delay: 2100 },
+                { top: 35, left: 50, rotate: 90, delay: 2800 },
+                { top: 35, left: 70, rotate: 90, delay: 3500 },
+                { top: 50, left: 50, rotate: -3, delay: 4200 },
+                { top: 50, left: 70, rotate: -3, delay: 4900 }
+            ],
+            'ㅆ': [
+                { top: 50, left: 35, rotate: 45, delay: 0 },
+                { top: 50, left: 35, rotate: -45, delay: 700 },
+                { top: 50, left: 60, rotate: 45, delay: 1400 },
+                { top: 50, left: 60, rotate: -45, delay: 2100 }
+            ],
+            'ㅉ': [
+                { top: 40, left: 35, rotate: 0, delay: 0 },
+                { top: 40, left: 50, rotate: 0, delay: 700 },
+                { top: 50, left: 30, rotate: 45, delay: 1400 },
+                { top: 50, left: 60, rotate: -45, delay: 2100 }
+            ],
+            'ㅏ': [
+                { top: 20, left: 60, rotate: 90, delay: 0 },
+                { top: 70, left: 50, rotate: 0, delay: 1000 }
+            ],
+            'ㅑ': [
+                { top: 20, left: 60, rotate: 90, delay: 0 },
+                { top: 60, left: 45, rotate: 0, delay: 700 },
+                { top: 75, left: 45, rotate: 0, delay: 1400 }
+            ],
+            'ㅓ': [
+                { top: 50, left: 30, rotate: 0, delay: 0 },
+                { top: 20, left: 40, rotate: 90, delay: 1000 }
+            ],
+            'ㅕ': [
+                { top: 60, left: 30, rotate: 0, delay: 0 },
+                { top: 75, left: 30, rotate: 0, delay: 700 },
+                { top: 20, left: 45, rotate: 90, delay: 1400 }
+            ],
+            'ㅗ': [
+                { top: 70, left: 30, rotate: 0, delay: 0 },
+                { top: 50, left: 50, rotate: 90, delay: 1000 }
+            ],
+            'ㅛ': [
+                { top: 70, left: 30, rotate: 0, delay: 0 },
+                { top: 55, left: 45, rotate: 90, delay: 700 },
+                { top: 70, left: 60, rotate: 90, delay: 1400 }
+            ],
+            'ㅜ': [
+                { top: 20, left: 30, rotate: 0, delay: 0 },
+                { top: 40, left: 50, rotate: 90, delay: 1000 }
+            ],
+            'ㅠ': [
+                { top: 20, left: 30, rotate: 0, delay: 0 },
+                { top: 40, left: 45, rotate: 90, delay: 700 },
+                { top: 40, left: 60, rotate: 90, delay: 1400 }
+            ],
+            'ㅡ': [
+                { top: 50, left: 30, rotate: 0, delay: 0 }
+            ],
+            'ㅣ': [
+                { top: 20, left: 50, rotate: 90, delay: 0 }
+            ],
+            'ㅐ': [
+                { top: 20, left: 40, rotate: 90, delay: 0 },
+                { top: 20, left: 65, rotate: 90, delay: 700 },
+                { top: 70, left: 50, rotate: 0, delay: 1400 }
+            ],
+            'ㅔ': [
+                { top: 50, left: 30, rotate: 0, delay: 0 },
+                { top: 20, left: 40, rotate: 90, delay: 700 },
+                { top: 20, left: 65, rotate: 90, delay: 1400 }
+            ],
+            'ㅖ': [
+                { top: 60, left: 30, rotate: 0, delay: 0 },
+                { top: 75, left: 30, rotate: 0, delay: 700 },
+                { top: 20, left: 45, rotate: 90, delay: 1400 },
+                { top: 20, left: 70, rotate: 90, delay: 2100 }
+            ],
+            'ㅘ': [
+                { top: 70, left: 30, rotate: 0, delay: 0 },
+                { top: 50, left: 50, rotate: 90, delay: 700 },
+                { top: 20, left: 75, rotate: 90, delay: 1400 },
+                { top: 60, left: 65, rotate: 0, delay: 2100 }
+            ],
+            'ㅙ': [
+                { top: 70, left: 30, rotate: 0, delay: 0 },
+                { top: 50, left: 50, rotate: 90, delay: 700 },
+                { top: 20, left: 65, rotate: 90, delay: 1400 },
+                { top: 20, left: 80, rotate: 90, delay: 2100 },
+                { top: 60, left: 70, rotate: 0, delay: 2800 }
+            ],
+            'ㅚ': [
+                { top: 70, left: 30, rotate: 0, delay: 0 },
+                { top: 20, left: 50, rotate: 90, delay: 700 },
+                { top: 20, left: 75, rotate: 90, delay: 1400 }
+            ],
+            'ㅝ': [
+                { top: 20, left: 30, rotate: 0, delay: 0 },
+                { top: 40, left: 50, rotate: 90, delay: 700 },
+                { top: 50, left: 20, rotate: 0, delay: 1400 },
+                { top: 20, left: 30, rotate: 90, delay: 2100 }
+            ],
+            'ㅞ': [
+                { top: 20, left: 30, rotate: 0, delay: 0 },
+                { top: 40, left: 50, rotate: 90, delay: 700 },
+                { top: 50, left: 20, rotate: 0, delay: 1400 },
+                { top: 20, left: 30, rotate: 90, delay: 2100 },
+                { top: 20, left: 55, rotate: 90, delay: 2800 }
+            ],
+            'ㅟ': [
+                { top: 20, left: 30, rotate: 0, delay: 0 },
+                { top: 20, left: 50, rotate: 90, delay: 700 },
+                { top: 40, left: 70, rotate: 90, delay: 1400 }
+            ],
+            'ㅢ': [
+                { top: 50, left: 30, rotate: 0, delay: 0 },
+                { top: 20, left: 50, rotate: 90, delay: 700 }
+            ],
+            '가': [
+                { top: 35, left: 30, rotate: -3, delay: 0 },
+                { top: 35, left: 52, rotate: 90, delay: 700 },
+                { top: 35, left: 68, rotate: 90, delay: 1400 },
+                { top: 60, left: 52, rotate: 0, delay: 2100 }
+            ],
+            '나': [
+                { top: 50, left: 30, rotate: -3, delay: 0 },
+                { top: 50, left: 30, rotate: 180, delay: 700 },
+                { top: 35, left: 68, rotate: 90, delay: 1400 },
+                { top: 60, left: 52, rotate: 0, delay: 2100 }
+            ],
+            '다': [
+                { top: 35, left: 30, rotate: -3, delay: 0 },
+                { top: 35, left: 52, rotate: 90, delay: 700 },
+                { top: 65, left: 52, rotate: -3, delay: 1400 },
+                { top: 35, left: 68, rotate: 90, delay: 2100 },
+                { top: 60, left: 52, rotate: 0, delay: 2800 }
+            ],
+            '라': [
+                { top: 35, left: 30, rotate: -3, delay: 0 },
+                { top: 35, left: 52, rotate: 90, delay: 700 },
+                { top: 50, left: 30, rotate: -3, delay: 1400 },
+                { top: 50, left: 52, rotate: 90, delay: 2100 },
+                { top: 65, left: 30, rotate: -3, delay: 2800 },
+                { top: 35, left: 68, rotate: 90, delay: 3500 },
+                { top: 60, left: 52, rotate: 0, delay: 4200 }
+            ]
+        };
+
+        const charSets = {
+            consonant: consonants,
+            vowel: vowels,
+            word: [
+                { char: '가', word: '가방', img: 'https://cdn.pixabay.com/photo/2016/09/16/17/33/bag-1674482_1280.png' },
+                { char: '나', word: '나비', img: 'https://cdn.pixabay.com/photo/2016/08/17/23/04/butterfly-1601666_1280.png' },
+                { char: '다', word: '다리', img: 'https://cdn.pixabay.com/photo/2017/04/04/18/14/bridge-2202271_1280.png' },
+                { char: '라', word: '라면', img: 'https://cdn.pixabay.com/photo/2020/05/20/09/27/noodle-5196328_1280.png' }
+            ]
+        };
+
+        function generateAllCombinations() {
+            dynamicWordSet = [];
+            for (let i = 0; i < consonants.length; i++) {
+                const chosungIndex = i;
+                for (let j = 0; j < vowels.length; j++) {
+                    const jungsungIndex = j;
+                    const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
+                    dynamicWordSet.push(String.fromCharCode(combinedCode));
+                }
+            }
+        }
+
+        let currentMode = '';
+        let currentIndex = 0;
+
+        function initializeSpeechSynth() {
+            return new Promise((resolve) => {
+                if ('speechSynthesis' in window) {
+                    speechSynthesis.onvoiceschanged = () => {
+                        speechSynthInitialized = true;
+                        resolve();
+                    };
+                } else {
+                    speechSynthInitialized = true;
+                    resolve();
+                }
+            });
+        }
+
+        function playSound(text) {
+            if (!speechSynthInitialized) {
+                console.warn("Speech synthesis not initialized.");
+                return;
+            }
+            if ('speechSynthesis' in window) {
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                const voices = speechSynthesis.getVoices();
+                const koreanVoice = voices.find(voice => voice.lang === 'ko-KR' || voice.lang === 'ko_KR');
+                if (koreanVoice) {
+                    utterance.voice = koreanVoice;
+                }
+                utterance.rate = 0.8;
+                utterance.pitch = 1.0;
+                speechSynthesis.speak(utterance);
+            } else {
+                alert("죄송해요, 이 브라우저에서는 음성 합성 기능을 지원하지 않습니다. ㅠㅠ");
+            }
+        }
+
+        function switchPage(page) {
+            if (page === 'start') {
+                startPage.style.display = 'flex';
+                learningPage.style.display = 'none';
+            } else {
+                startPage.style.display = 'none';
+                learningPage.style.display = 'flex';
+            }
+        }
+
+        function initCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 15;
+            ctx.strokeStyle = '#ff6347';
+        }
+        
+        function showStrokeOrder(char) {
+            strokeGuideContainer.innerHTML = '';
+            const guides = strokeOrderData[char];
+            if (!guides) {
+                console.warn(`'${char}'에 대한 획 순서 데이터가 없습니다.`);
+                return;
+            }
+
+            guides.forEach((guide, index) => {
+                const arrow = document.createElement('div');
+                arrow.className = 'stroke-arrow';
+                
+                arrow.style.opacity = '0';
+                arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg) scale(0.5)`;
+                
+                const startDelay = guide.delay + (index * 700); 
+                
+                setTimeout(() => {
+                    arrow.style.left = `${guide.left}%`;
+                    arrow.style.top = `${guide.top}%`;
+                    arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg) scale(1)`;
+                    arrow.style.opacity = '1';
+                }, startDelay);
+                
+                setTimeout(() => {
+                    arrow.style.opacity = '0';
+                    arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg) scale(0.5)`;
+                }, startDelay + 2000);
+
+                strokeGuideContainer.appendChild(arrow);
+            });
+        }
+        
+        function resetDrawingState() {
+            isDrawing = false;
+            lastX = 0;
+            lastY = 0;
+        }
+
+        function setupLearning(mode) {
+            currentMode = mode;
+            currentIndex = 0;
+            isFirstTouchHandled = false;
+            initCanvas();
+            switchPage('learning');
+            updateUI(false);
+        }
+
+        function updateUI(activate = true) {
+            let currentSet;
+            let charToDisplay;
+            
+            if (currentMode === 'consonant') {
+                currentSet = charSets.consonant;
+                charToDisplay = currentSet[currentIndex];
+                currentTitle.textContent = `${charToDisplay} 배우기`;
+                guideChar.textContent = charToDisplay;
+                wordInfo.style.opacity = 0;
+            } else if (currentMode === 'vowel') {
+                currentSet = charSets.vowel;
+                charToDisplay = currentSet[currentIndex];
+                currentTitle.textContent = `${charToDisplay} 배우기`;
+                guideChar.textContent = charToDisplay;
+                wordInfo.style.opacity = 0;
+            } else if (currentMode === 'word') {
+                currentSet = charSets.word;
+                const currentData = currentSet[currentIndex];
+                charToDisplay = currentData.char;
+                currentTitle.textContent = `${charToDisplay} 쓰기`;
+                guideChar.textContent = charToDisplay;
+                wordImage.src = currentData.img;
+                wordText.textContent = currentData.word;
+                wordInfo.style.opacity = 1;
+            } else if (currentMode === 'word_full') {
+                currentSet = dynamicWordSet;
+                charToDisplay = currentSet[currentIndex];
+                currentTitle.textContent = `${charToDisplay} 쓰기`;
+                guideChar.textContent = charToDisplay;
+                wordInfo.style.opacity = 0;
+            }
+
+            if (activate) {
+                if (charToDisplay) {
+                    playSound(charToDisplay);
+                    showStrokeOrder(charToDisplay);
+                }
+            } else {
+                 // 비활성화 상태에서는 획 가이드를 지우고 소리 재생 안함
+                strokeGuideContainer.innerHTML = '';
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            let x, y;
+            if (e.touches) {
+                const pos = getTouchPos(e);
+                if (!pos) return;
+                x = pos.x;
+                y = pos.y;
+            } else {
+                x = e.offsetX;
+                y = e.offsetY;
+            }
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            [lastX, lastY] = [x, y];
+        }
+
+        function getTouchPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            if (!isFirstTouchHandled) {
+                isFirstTouchHandled = true;
+                updateUI(true);
+            }
+
+            isDrawing = true;
+            if (e.touches) {
+                e.preventDefault();
+                const pos = getTouchPos(e);
+                if (pos) {
+                    [lastX, lastY] = [pos.x, pos.y];
+                }
+            } else {
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+            }
+        }
+
+        function endDrawing() {
+            isDrawing = false;
+        }
+
+        function moveDrawing(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            draw(e);
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', moveDrawing);
+        canvas.addEventListener('mouseup', endDrawing);
+        canvas.addEventListener('mouseout', endDrawing);
+
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', moveDrawing, { passive: false });
+        canvas.addEventListener('touchend', endDrawing);
+
+        consonantBtn.addEventListener('click', () => setupLearning('consonant'));
+        vowelBtn.addEventListener('click', () => setupLearning('vowel'));
+        wordBtn.addEventListener('click', () => setupLearning('word_full'));
+        backBtn.addEventListener('click', () => switchPage('start'));
+
+        nextBtn.addEventListener('click', () => {
+            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : (currentMode === 'word' ? charSets.word : dynamicWordSet));
+            currentIndex = (currentIndex + 1) % currentSet.length;
+            initCanvas();
+            updateUI(true);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : (currentMode === 'word' ? charSets.word : dynamicWordSet));
+            currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
+            initCanvas();
+            updateUI(true);
+        });
+
+        wordImage.addEventListener('click', () => {
+            if (currentMode === 'word') {
+                playSound(charSets.word[currentIndex].word);
+            }
+        });
+
+        wordText.addEventListener('click', () => {
+            if (currentMode === 'word') {
+                playSound(charSets.word[currentIndex].word);
+            }
+        });
+        
+        initializeSpeechSynth().then(() => {
+            console.log("Speech synthesis ready.");
+        });
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+    </script>
+</body>
+</html>
