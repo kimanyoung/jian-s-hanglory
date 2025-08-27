@@ -95,6 +95,7 @@
             animation: fadeIn 1.5s ease-in-out;
             position: relative;
             background-color: #ffe4e1;
+            padding-bottom: 50px; /* 아래 여백 추가 */
         }
 
         #learning-page h2 {
@@ -114,6 +115,28 @@
             border-radius: 15px;
             background-color: #fff8f5;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        #stroke-guide-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .stroke-arrow {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M47.7,21.8c0.8,0.7,1.2,1.7,1.2,2.8c0,1-0.4,2.1-1.2,2.8L32.4,43.3c-1.6,1.6-4.2,1.6-5.8,0c-1.6-1.6-1.6-4.2,0-5.8L35.2,29h-31c-2.2,0-4-1.8-4-4s1.8-4,4-4h31l-8.6-8.6c-1.6-1.6-1.6-4.2,0-5.8c1.6-1.6,4.2-1.6,5.8,0L47.7,21.8z" fill="%23d2691e"/></svg>');
+            opacity: 0;
+            transition: opacity 0.5s;
+            transform-origin: 50% 50%;
         }
 
         #guide-char {
@@ -134,29 +157,40 @@
             width: 100%;
             height: 100%;
             touch-action: none;
+            z-index: 10;
         }
 
         .navigation-buttons {
             display: flex;
             justify-content: space-around;
-            width: 80vw;
-            max-width: 600px;
+            align-items: center; /* 버튼 정렬 */
+            width: 90vw;
+            max-width: 650px;
             margin-top: 3vh;
         }
 
-        .nav-btn {
+        .nav-btn, #back-btn {
             padding: 2.5vw 5vw;
             font-size: 3vw;
             border-radius: 20px;
             border: none;
             color: #fff;
-            background-color: #ff8e72;
             cursor: pointer;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             transition: transform 0.3s;
         }
 
-        .nav-btn:active {
+        .nav-btn {
+            background-color: #ff8e72;
+            order: 2; /* 기본 순서 */
+        }
+        
+        #back-btn {
+            background-color: #6c757d;
+            order: 3; /* 뒤로가기 버튼의 순서를 맨 마지막으로 */
+        }
+
+        .nav-btn:active, #back-btn:active {
             transform: scale(0.95);
         }
 
@@ -187,25 +221,6 @@
             cursor: pointer;
         }
 
-        #back-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 1vw 2vw;
-            font-size: 2.5vw;
-            border-radius: 15px;
-            border: none;
-            color: #fff;
-            background-color: #6c757d;
-            cursor: pointer;
-            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
-
-        #back-btn:active {
-            transform: scale(0.95);
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -223,10 +238,9 @@
             .menu-button { padding: 20px; font-size: 30px; margin: 15px; }
             #learning-page h2 { font-size: 50px; }
             #guide-char { font-size: 300px; }
-            .nav-btn { font-size: 24px; padding: 15px 30px; }
+            .nav-btn, #back-btn { font-size: 24px; padding: 15px 30px; }
             #word-image { width: 120px; }
             #word-text { font-size: 30px; }
-            #back-btn { top: 30px; left: 30px; padding: 8px 16px; font-size: 18px; border-radius: 20px; }
         }
     </style>
 </head>
@@ -241,9 +255,9 @@
         </div>
 
         <div id="learning-page">
-            <button id="back-btn">뒤로 가기</button>
             <h2 id="current-title">자음 배우기</h2>
             <div id="drawing-area">
+                <div id="stroke-guide-container"></div>
                 <div id="guide-char"></div>
                 <canvas id="drawing-canvas"></canvas>
             </div>
@@ -254,6 +268,7 @@
             <div class="navigation-buttons">
                 <button id="prev-btn" class="nav-btn">이전</button>
                 <button id="next-btn" class="nav-btn">다음</button>
+                <button id="back-btn">뒤로 가기</button>
             </div>
         </div>
     </div>
@@ -274,6 +289,7 @@
         const wordImage = document.getElementById('word-image');
         const wordText = document.getElementById('word-text');
         const backBtn = document.getElementById('back-btn');
+        const strokeGuideContainer = document.getElementById('stroke-guide-container');
 
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
@@ -281,9 +297,37 @@
         let lastY = 0;
         let speechSynthInitialized = false;
 
+        const CHOSUNG_START_CODE = 0x1100;
+        const JUNGSUNG_START_CODE = 0x1161;
+        const JONGSUNG_START_CODE = 0x11a7;
+        const HANGUL_START_CODE = 0xac00;
+
+        const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
+        const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
+        
+        let dynamicWordSet = [];
+
+        // 획 순서 데이터 (예시)
+        const strokeOrderData = {
+            'ㄱ': [
+                { top: 50, left: 15, rotate: -3, delay: 0 },
+                { top: 50, left: 38, rotate: 90, delay: 500 }
+            ],
+            'ㅏ': [
+                { top: 20, left: 60, rotate: 90, delay: 0 },
+                { top: 70, left: 50, rotate: 0, delay: 500 }
+            ],
+            '가': [
+                { top: 35, left: 30, rotate: -3, delay: 0 },
+                { top: 35, left: 52, rotate: 90, delay: 500 },
+                { top: 35, left: 68, rotate: 90, delay: 1000 },
+                { top: 60, left: 52, rotate: 0, delay: 1500 }
+            ]
+        };
+
         const charSets = {
-            consonant: ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'],
-            vowel: ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'],
+            consonant: consonants,
+            vowel: vowels,
             word: [
                 { char: '가', word: '가방', img: 'https://cdn.pixabay.com/photo/2016/09/16/17/33/bag-1674482_1280.png' },
                 { char: '나', word: '나비', img: 'https://cdn.pixabay.com/photo/2016/08/17/23/04/butterfly-1601666_1280.png' },
@@ -292,12 +336,24 @@
             ]
         };
 
+        function generateAllCombinations() {
+            dynamicWordSet = [];
+            for (let i = 0; i < consonants.length; i++) {
+                for (let j = 0; j < vowels.length; j++) {
+                    const consonantCode = consonants.indexOf(consonants[i]);
+                    const vowelCode = vowels.indexOf(vowels[j]);
+                    const combinedCode = HANGUL_START_CODE + (consonantCode * 21 + vowelCode) * 28;
+                    dynamicWordSet.push(String.fromCharCode(combinedCode));
+                }
+            }
+        }
+
         let currentMode = '';
         let currentIndex = 0;
 
         function initializeSpeechSynth() {
             return new Promise((resolve) => {
-                if (speechSynthesis.onvoiceschanged !== undefined) {
+                if ('speechSynthesis' in window) {
                     speechSynthesis.onvoiceschanged = () => {
                         speechSynthInitialized = true;
                         resolve();
@@ -351,33 +407,75 @@
             ctx.lineWidth = 15;
             ctx.strokeStyle = '#ff6347';
         }
+        
+        function showStrokeOrder(char) {
+            strokeGuideContainer.innerHTML = '';
+            const guides = strokeOrderData[char];
+            if (!guides) return;
+
+            guides.forEach(guide => {
+                const arrow = document.createElement('div');
+                arrow.className = 'stroke-arrow';
+                arrow.style.top = `${guide.top}%`;
+                arrow.style.left = `${guide.left}%`;
+                arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg)`;
+                
+                setTimeout(() => {
+                    arrow.style.opacity = '1';
+                }, guide.delay);
+                
+                strokeGuideContainer.appendChild(arrow);
+            });
+        }
 
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
+            if (currentMode === 'word_full') {
+                generateAllCombinations();
+            }
             updateUI();
             switchPage('learning');
         }
 
         function updateUI() {
-            let currentData;
-            if (currentMode === 'consonant' || currentMode === 'vowel') {
-                const currentSet = currentMode === 'consonant' ? charSets.consonant : charSets.vowel;
-                const char = currentSet[currentIndex];
-                currentTitle.textContent = `${char} 배우기`;
-                guideChar.textContent = char;
+            let currentSet;
+            let charToDisplay;
+            
+            if (currentMode === 'consonant') {
+                currentSet = charSets.consonant;
+                charToDisplay = currentSet[currentIndex];
+                currentTitle.textContent = `${charToDisplay} 배우기`;
+                guideChar.textContent = charToDisplay;
                 wordInfo.style.opacity = 0;
-                playSound(char); 
+            } else if (currentMode === 'vowel') {
+                currentSet = charSets.vowel;
+                charToDisplay = currentSet[currentIndex];
+                currentTitle.textContent = `${charToDisplay} 배우기`;
+                guideChar.textContent = charToDisplay;
+                wordInfo.style.opacity = 0;
             } else if (currentMode === 'word') {
-                currentData = charSets.word[currentIndex];
-                currentTitle.textContent = `${currentData.char} 쓰기`;
-                guideChar.textContent = currentData.char;
+                currentSet = charSets.word;
+                const currentData = currentSet[currentIndex];
+                charToDisplay = currentData.char;
+                currentTitle.textContent = `${charToDisplay} 쓰기`;
+                guideChar.textContent = charToDisplay;
                 wordImage.src = currentData.img;
                 wordText.textContent = currentData.word;
                 wordInfo.style.opacity = 1;
-                playSound(currentData.char); 
+            } else if (currentMode === 'word_full') {
+                currentSet = dynamicWordSet;
+                charToDisplay = currentSet[currentIndex];
+                currentTitle.textContent = `${charToDisplay} 쓰기`;
+                guideChar.textContent = charToDisplay;
+                wordInfo.style.opacity = 0;
             }
+
             initCanvas();
+            if (charToDisplay) {
+                playSound(charToDisplay);
+                showStrokeOrder(charToDisplay);
+            }
         }
 
         function draw(e) {
@@ -442,17 +540,17 @@
 
         consonantBtn.addEventListener('click', () => setupLearning('consonant'));
         vowelBtn.addEventListener('click', () => setupLearning('vowel'));
-        wordBtn.addEventListener('click', () => setupLearning('word'));
+        wordBtn.addEventListener('click', () => setupLearning('word_full'));
         backBtn.addEventListener('click', () => switchPage('start'));
 
         nextBtn.addEventListener('click', () => {
-            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : charSets.word);
+            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : (currentMode === 'word' ? charSets.word : dynamicWordSet));
             currentIndex = (currentIndex + 1) % currentSet.length;
             updateUI();
         });
 
         prevBtn.addEventListener('click', () => {
-            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : charSets.word);
+            const currentSet = currentMode === 'consonant' ? charSets.consonant : (currentMode === 'vowel' ? charSets.vowel : (currentMode === 'word' ? charSets.word : dynamicWordSet));
             currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             updateUI();
         });
