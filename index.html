@@ -351,8 +351,10 @@
                 const chosungIndex = consonants.indexOf(limitedConsonants[i]);
                 for (let j = 0; j < limitedVowels.length; j++) {
                     const jungsungIndex = vowels.indexOf(limitedVowels[j]);
-                    const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
-                    dynamicWordSet.push(String.fromCharCode(combinedCode));
+                    if (chosungIndex !== -1 && jungsungIndex !== -1) {
+                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
+                         dynamicWordSet.push(String.fromCharCode(combinedCode));
+                    }
                 }
             }
         }
@@ -426,12 +428,10 @@
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
+            initCanvas();
+            renderCharList();
             switchPage('learning');
-            setTimeout(() => { // 캔버스 로딩 후 약간의 딜레이를 줘서 안정적으로 작동하도록 수정
-                initCanvas();
-                renderCharList();
-                updateUI();
-            }, 100); // 0.1초 딜레이
+            updateUI();
         }
 
         function updateUI() {
