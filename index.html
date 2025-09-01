@@ -131,20 +131,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-        }
-
-        .stroke-arrow {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M47.7,21.8c0.8,0.7,1.2,1.7,1.2,2.8c0,1-0.4,2.1-1.2,2.8L32.4,43.3c-1.6,1.6-4.2,1.6-5.8,0c-1.6-1.6-1.6-4.2,0-5.8L35.2,29h-31c-2.2,0-4-1.8-4-4s1.8-4,4-4h31l-8.6-8.6c-1.6-1.6-1.6-4.2,0-5.8c1.6-1.6,4.2-1.6,5.8,0L47.7,21.8z" fill="%23e74c3c"/></svg>');
-            opacity: 0;
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-            transform-origin: 50% 50%;
             z-index: 20;
+            pointer-events: none;
         }
 
         #guide-char {
@@ -153,9 +141,18 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 40vw;
-            color: rgba(210, 105, 30, 0.2);
+            color: rgba(210, 105, 30, 0.08);
             user-select: none;
             pointer-events: none;
+            z-index: 5;
+        }
+        
+        #stroke-guide-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
         canvas {
@@ -310,7 +307,9 @@
             <div id="learning-content-wrapper">
                 <div id="char-list-container"></div>
                 <div id="drawing-area">
-                    <div id="stroke-guide-container"></div>
+                    <div id="stroke-guide-container">
+                        <canvas id="stroke-guide-canvas"></canvas>
+                    </div>
                     <div id="guide-char"></div>
                     <canvas id="drawing-canvas"></canvas>
                 </div>
@@ -337,17 +336,19 @@
         const currentTitle = document.getElementById('current-title');
         const guideChar = document.getElementById('guide-char');
         const canvas = document.getElementById('drawing-canvas');
+        const strokeGuideCanvas = document.getElementById('stroke-guide-canvas');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const wordInfo = document.getElementById('word-info');
         const wordImage = document.getElementById('word-image');
         const wordText = document.getElementById('word-text');
         const backBtn = document.getElementById('back-btn');
-        const strokeGuideContainer = document.getElementById('stroke-guide-container');
         const charListContainer = document.getElementById('char-list-container');
         const learningContentWrapper = document.getElementById('learning-content-wrapper');
 
         const ctx = canvas.getContext('2d');
+        const strokeGuideCtx = strokeGuideCanvas.getContext('2d');
+
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
@@ -359,244 +360,245 @@
         const JONGSUNG_START_CODE = 0x11a7;
         const HANGUL_START_CODE = 0xac00;
 
-        const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
-        const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
+        // 기본 자음 14개와 모음 10개로 범위 한정
+        const basicConsonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+        const basicVowels = ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'];
         
         let dynamicWordSet = [];
 
         const strokeOrderData = {
             'ㄱ': [
-                { top: 40, left: 30, rotate: -3, delay: 0 },
-                { top: 40, left: 55, rotate: 90, delay: 1000 }
+                [{x: 30, y: 40}, {x: 65, y: 40}],
+                [{x: 65, y: 40}, {x: 65, y: 70}]
             ],
             'ㄴ': [
-                { top: 50, left: 30, rotate: -3, delay: 0 },
-                { top: 50, left: 30, rotate: 180, delay: 1000 }
+                [{x: 30, y: 50}, {x: 65, y: 50}],
+                [{x: 65, y: 50}, {x: 65, y: 80}]
             ],
             'ㄷ': [
-                { top: 40, left: 30, rotate: -3, delay: 0 },
-                { top: 40, left: 55, rotate: 90, delay: 1000 },
-                { top: 70, left: 55, rotate: -3, delay: 2000 }
+                [{x: 30, y: 40}, {x: 65, y: 40}],
+                [{x: 65, y: 40}, {x: 65, y: 70}],
+                [{x: 30, y: 70}, {x: 65, y: 70}]
             ],
             'ㄹ': [
-                { top: 40, left: 30, rotate: -3, delay: 0 },
-                { top: 40, left: 55, rotate: 90, delay: 700 },
-                { top: 55, left: 30, rotate: -3, delay: 1400 },
-                { top: 55, left: 55, rotate: 90, delay: 2100 },
-                { top: 70, left: 30, rotate: -3, delay: 2800 }
+                [{x: 30, y: 40}, {x: 65, y: 40}],
+                [{x: 65, y: 40}, {x: 65, y: 55}],
+                [{x: 30, y: 55}, {x: 65, y: 55}],
+                [{x: 65, y: 55}, {x: 65, y: 70}],
+                [{x: 30, y: 70}, {x: 65, y: 70}]
             ],
             'ㅁ': [
-                { top: 40, left: 30, rotate: -3, delay: 0 },
-                { top: 40, left: 55, rotate: 90, delay: 700 },
-                { top: 40, left: 55, rotate: 180, delay: 1400 },
-                { top: 70, left: 55, rotate: -90, delay: 2100 }
+                [{x: 30, y: 40}, {x: 65, y: 40}],
+                [{x: 65, y: 40}, {x: 65, y: 70}],
+                [{x: 65, y: 70}, {x: 30, y: 70}],
+                [{x: 30, y: 70}, {x: 30, y: 40}]
             ],
             'ㅂ': [
-                { top: 40, left: 30, rotate: 90, delay: 0 },
-                { top: 40, left: 55, rotate: 90, delay: 700 },
-                { top: 55, left: 30, rotate: -3, delay: 1400 },
-                { top: 55, left: 55, rotate: -3, delay: 2100 }
+                [{x: 30, y: 40}, {x: 30, y: 70}],
+                [{x: 65, y: 40}, {x: 65, y: 70}],
+                [{x: 30, y: 55}, {x: 65, y: 55}],
+                [{x: 30, y: 70}, {x: 65, y: 70}]
             ],
             'ㅅ': [
-                { top: 50, left: 45, rotate: 45, delay: 0 },
-                { top: 50, left: 45, rotate: -45, delay: 700 }
+                [{x: 50, y: 40}, {x: 35, y: 70}],
+                [{x: 50, y: 40}, {x: 65, y: 70}]
             ],
             'ㅇ': [
-                { top: 50, left: 50, rotate: 0, delay: 0 }
+                [{x: 50, y: 55, type: 'circle', radius: 18}]
             ],
             'ㅈ': [
-                { top: 40, left: 45, rotate: 0, delay: 0 },
-                { top: 50, left: 38, rotate: 45, delay: 700 },
-                { top: 50, left: 58, rotate: -45, delay: 1400 }
+                [{x: 40, y: 40}, {x: 60, y: 40}],
+                [{x: 50, y: 40}, {x: 35, y: 70}],
+                [{x: 50, y: 40}, {x: 65, y: 70}]
             ],
             'ㅊ': [
-                { top: 35, left: 45, rotate: 0, delay: 0 },
-                { top: 40, left: 38, rotate: 45, delay: 700 },
-                { top: 40, left: 58, rotate: -45, delay: 1400 },
-                { top: 60, left: 50, rotate: 90, delay: 2100 }
+                [{x: 45, y: 30}, {x: 55, y: 30}],
+                [{x: 50, y: 40}, {x: 35, y: 70}],
+                [{x: 50, y: 40}, {x: 65, y: 70}],
+                [{x: 50, y: 70}, {x: 50, y: 80}]
             ],
             'ㅋ': [
-                { top: 35, left: 30, rotate: -3, delay: 0 },
-                { top: 50, left: 30, rotate: -3, delay: 700 },
-                { top: 50, left: 55, rotate: 90, delay: 1400 }
+                [{x: 30, y: 40}, {x: 65, y: 40}],
+                [{x: 30, y: 55}, {x: 65, y: 55}],
+                [{x: 30, y: 70}, {x: 65, y: 70}]
             ],
             'ㅌ': [
-                { top: 30, left: 30, rotate: -3, delay: 0 },
-                { top: 45, left: 30, rotate: -3, delay: 700 },
-                { top: 45, left: 55, rotate: 90, delay: 1400 },
-                { top: 60, left: 30, rotate: -3, delay: 2100 }
+                [{x: 30, y: 35}, {x: 65, y: 35}],
+                [{x: 30, y: 50}, {x: 65, y: 50}],
+                [{x: 30, y: 65}, {x: 65, y: 65}],
+                [{x: 30, y: 50}, {x: 65, y: 50}]
             ],
             'ㅍ': [
-                { top: 40, left: 30, rotate: -3, delay: 0 },
-                { top: 40, left: 55, rotate: -3, delay: 700 },
-                { top: 40, left: 30, rotate: 90, delay: 1400 },
-                { top: 40, left: 55, rotate: 90, delay: 2100 }
+                [{x: 30, y: 40}, {x: 65, y: 40}],
+                [{x: 30, y: 70}, {x: 65, y: 70}],
+                [{x: 30, y: 40}, {x: 30, y: 70}],
+                [{x: 65, y: 40}, {x: 65, y: 70}]
             ],
             'ㅎ': [
-                { top: 35, left: 45, rotate: 0, delay: 0 },
-                { top: 50, left: 45, rotate: 0, delay: 700 },
-                { top: 55, left: 50, rotate: 0, delay: 1400 }
+                [{x: 40, y: 35}, {x: 60, y: 35}],
+                [{x: 40, y: 50}, {x: 60, y: 50}],
+                [{x: 50, y: 65, type: 'circle', radius: 10}]
             ],
             'ㄲ': [
-                { top: 40, left: 25, rotate: -3, delay: 0 },
-                { top: 40, left: 45, rotate: 90, delay: 700 },
-                { top: 40, left: 50, rotate: -3, delay: 1400 },
-                { top: 40, left: 70, rotate: 90, delay: 2100 }
+                [{x: 30, y: 40}, {x: 50, y: 40}],
+                [{x: 50, y: 40}, {x: 50, y: 70}],
+                [{x: 55, y: 40}, {x: 75, y: 40}],
+                [{x: 75, y: 40}, {x: 75, y: 70}]
             ],
             'ㄸ': [
-                { top: 35, left: 25, rotate: -3, delay: 0 },
-                { top: 35, left: 45, rotate: 90, delay: 700 },
-                { top: 35, left: 50, rotate: -3, delay: 1400 },
-                { top: 35, left: 70, rotate: 90, delay: 2100 },
-                { top: 65, left: 45, rotate: -3, delay: 2800 }
+                [{x: 30, y: 40}, {x: 50, y: 40}],
+                [{x: 50, y: 40}, {x: 50, y: 70}],
+                [{x: 55, y: 40}, {x: 75, y: 40}],
+                [{x: 75, y: 40}, {x: 75, y: 70}],
+                [{x: 30, y: 70}, {x: 75, y: 70}]
             ],
             'ㅃ': [
-                { top: 35, left: 25, rotate: 90, delay: 0 },
-                { top: 35, left: 45, rotate: 90, delay: 700 },
-                { top: 50, left: 25, rotate: -3, delay: 1400 },
-                { top: 50, left: 45, rotate: -3, delay: 2100 },
-                { top: 35, left: 50, rotate: 90, delay: 2800 },
-                { top: 35, left: 70, rotate: 90, delay: 3500 },
-                { top: 50, left: 50, rotate: -3, delay: 4200 },
-                { top: 50, left: 70, rotate: -3, delay: 4900 }
+                [{x: 30, y: 40}, {x: 30, y: 70}],
+                [{x: 50, y: 40}, {x: 50, y: 70}],
+                [{x: 30, y: 55}, {x: 50, y: 55}],
+                [{x: 30, y: 70}, {x: 50, y: 70}],
+                [{x: 55, y: 40}, {x: 55, y: 70}],
+                [{x: 75, y: 40}, {x: 75, y: 70}],
+                [{x: 55, y: 55}, {x: 75, y: 55}],
+                [{x: 55, y: 70}, {x: 75, y: 70}]
             ],
             'ㅆ': [
-                { top: 50, left: 35, rotate: 45, delay: 0 },
-                { top: 50, left: 35, rotate: -45, delay: 700 },
-                { top: 50, left: 60, rotate: 45, delay: 1400 },
-                { top: 50, left: 60, rotate: -45, delay: 2100 }
+                [{x: 40, y: 40}, {x: 25, y: 70}],
+                [{x: 40, y: 40}, {x: 55, y: 70}],
+                [{x: 60, y: 40}, {x: 45, y: 70}],
+                [{x: 60, y: 40}, {x: 75, y: 70}]
             ],
             'ㅉ': [
-                { top: 40, left: 35, rotate: 0, delay: 0 },
-                { top: 40, left: 50, rotate: 0, delay: 700 },
-                { top: 50, left: 30, rotate: 45, delay: 1400 },
-                { top: 50, left: 60, rotate: -45, delay: 2100 }
+                [{x: 40, y: 30}, {x: 60, y: 30}],
+                [{x: 40, y: 45}, {x: 60, y: 45}],
+                [{x: 50, y: 45}, {x: 35, y: 75}],
+                [{x: 50, y: 45}, {x: 65, y: 75}]
             ],
             'ㅏ': [
-                { top: 20, left: 60, rotate: 90, delay: 0 },
-                { top: 70, left: 50, rotate: 0, delay: 1000 }
+                [{x: 65, y: 30}, {x: 65, y: 70}],
+                [{x: 55, y: 50}, {x: 70, y: 50}]
             ],
             'ㅑ': [
-                { top: 20, left: 60, rotate: 90, delay: 0 },
-                { top: 60, left: 45, rotate: 0, delay: 700 },
-                { top: 75, left: 45, rotate: 0, delay: 1400 }
+                [{x: 65, y: 30}, {x: 65, y: 70}],
+                [{x: 55, y: 40}, {x: 70, y: 40}],
+                [{x: 55, y: 55}, {x: 70, y: 55}]
             ],
             'ㅓ': [
-                { top: 50, left: 30, rotate: 0, delay: 0 },
-                { top: 20, left: 40, rotate: 90, delay: 1000 }
+                [{x: 35, y: 50}, {x: 50, y: 50}],
+                [{x: 45, y: 30}, {x: 45, y: 70}]
             ],
             'ㅕ': [
-                { top: 60, left: 30, rotate: 0, delay: 0 },
-                { top: 75, left: 30, rotate: 0, delay: 700 },
-                { top: 20, left: 45, rotate: 90, delay: 1400 }
+                [{x: 35, y: 40}, {x: 50, y: 40}],
+                [{x: 35, y: 55}, {x: 50, y: 55}],
+                [{x: 45, y: 30}, {x: 45, y: 70}]
             ],
             'ㅗ': [
-                { top: 70, left: 30, rotate: 0, delay: 0 },
-                { top: 50, left: 50, rotate: 90, delay: 1000 }
+                [{x: 30, y: 65}, {x: 70, y: 65}],
+                [{x: 50, y: 55}, {x: 50, y: 75}]
             ],
             'ㅛ': [
-                { top: 70, left: 30, rotate: 0, delay: 0 },
-                { top: 55, left: 45, rotate: 90, delay: 700 },
-                { top: 70, left: 60, rotate: 90, delay: 1400 }
+                [{x: 30, y: 65}, {x: 70, y: 65}],
+                [{x: 40, y: 55}, {x: 40, y: 75}],
+                [{x: 60, y: 55}, {x: 60, y: 75}]
             ],
             'ㅜ': [
-                { top: 20, left: 30, rotate: 0, delay: 0 },
-                { top: 40, left: 50, rotate: 90, delay: 1000 }
+                [{x: 30, y: 35}, {x: 70, y: 35}],
+                [{x: 50, y: 25}, {x: 50, y: 45}]
             ],
             'ㅠ': [
-                { top: 20, left: 30, rotate: 0, delay: 0 },
-                { top: 40, left: 45, rotate: 90, delay: 700 },
-                { top: 40, left: 60, rotate: 90, delay: 1400 }
+                [{x: 30, y: 35}, {x: 70, y: 35}],
+                [{x: 40, y: 25}, {x: 40, y: 45}],
+                [{x: 60, y: 25}, {x: 60, y: 45}]
             ],
             'ㅡ': [
-                { top: 50, left: 30, rotate: 0, delay: 0 }
+                [{x: 30, y: 50}, {x: 70, y: 50}]
             ],
             'ㅣ': [
-                { top: 20, left: 50, rotate: 90, delay: 0 }
+                [{x: 50, y: 30}, {x: 50, y: 70}]
             ],
             'ㅐ': [
-                { top: 20, left: 40, rotate: 90, delay: 0 },
-                { top: 20, left: 65, rotate: 90, delay: 700 },
-                { top: 70, left: 50, rotate: 0, delay: 1400 }
+                [{x: 35, y: 30}, {x: 35, y: 70}],
+                [{x: 65, y: 30}, {x: 65, y: 70}],
+                [{x: 50, y: 50}, {x: 70, y: 50}]
             ],
             'ㅔ': [
-                { top: 50, left: 30, rotate: 0, delay: 0 },
-                { top: 20, left: 40, rotate: 90, delay: 700 },
-                { top: 20, left: 65, rotate: 90, delay: 1400 }
+                [{x: 30, y: 50}, {x: 50, y: 50}],
+                [{x: 45, y: 30}, {x: 45, y: 70}],
+                [{x: 70, y: 30}, {x: 70, y: 70}]
             ],
             'ㅖ': [
-                { top: 60, left: 30, rotate: 0, delay: 0 },
-                { top: 75, left: 30, rotate: 0, delay: 700 },
-                { top: 20, left: 45, rotate: 90, delay: 1400 },
-                { top: 20, left: 70, rotate: 90, delay: 2100 }
+                [{x: 30, y: 40}, {x: 50, y: 40}],
+                [{x: 30, y: 55}, {x: 50, y: 55}],
+                [{x: 45, y: 30}, {x: 45, y: 70}],
+                [{x: 70, y: 30}, {x: 70, y: 70}]
             ],
             'ㅘ': [
-                { top: 70, left: 30, rotate: 0, delay: 0 },
-                { top: 50, left: 50, rotate: 90, delay: 700 },
-                { top: 20, left: 75, rotate: 90, delay: 1400 },
-                { top: 60, left: 65, rotate: 0, delay: 2100 }
+                [{x: 30, y: 65}, {x: 70, y: 65}],
+                [{x: 50, y: 55}, {x: 50, y: 75}],
+                [{x: 70, y: 30}, {x: 70, y: 60}],
+                [{x: 60, y: 45}, {x: 75, y: 45}]
             ],
             'ㅙ': [
-                { top: 70, left: 30, rotate: 0, delay: 0 },
-                { top: 50, left: 50, rotate: 90, delay: 700 },
-                { top: 20, left: 65, rotate: 90, delay: 1400 },
-                { top: 20, left: 80, rotate: 90, delay: 2100 },
-                { top: 60, left: 70, rotate: 0, delay: 2800 }
+                [{x: 30, y: 65}, {x: 70, y: 65}],
+                [{x: 50, y: 55}, {x: 50, y: 75}],
+                [{x: 65, y: 30}, {x: 65, y: 60}],
+                [{x: 80, y: 30}, {x: 80, y: 60}],
+                [{x: 72, y: 45}, {x: 87, y: 45}]
             ],
             'ㅚ': [
-                { top: 70, left: 30, rotate: 0, delay: 0 },
-                { top: 20, left: 50, rotate: 90, delay: 700 },
-                { top: 20, left: 75, rotate: 90, delay: 1400 }
+                [{x: 30, y: 65}, {x: 70, y: 65}],
+                [{x: 50, y: 55}, {x: 50, y: 75}],
+                [{x: 75, y: 30}, {x: 75, y: 70}]
             ],
             'ㅝ': [
-                { top: 20, left: 30, rotate: 0, delay: 0 },
-                { top: 40, left: 50, rotate: 90, delay: 700 },
-                { top: 50, left: 20, rotate: 0, delay: 1400 },
-                { top: 20, left: 30, rotate: 90, delay: 2100 }
+                [{x: 30, y: 35}, {x: 70, y: 35}],
+                [{x: 50, y: 25}, {x: 50, y: 45}],
+                [{x: 25, y: 50}, {x: 40, y: 50}],
+                [{x: 35, y: 30}, {x: 35, y: 70}]
             ],
             'ㅞ': [
-                { top: 20, left: 30, rotate: 0, delay: 0 },
-                { top: 40, left: 50, rotate: 90, delay: 700 },
-                { top: 50, left: 20, rotate: 0, delay: 1400 },
-                { top: 20, left: 30, rotate: 90, delay: 2100 },
-                { top: 20, left: 55, rotate: 90, delay: 2800 }
+                [{x: 30, y: 35}, {x: 70, y: 35}],
+                [{x: 50, y: 25}, {x: 50, y: 45}],
+                [{x: 25, y: 50}, {x: 40, y: 50}],
+                [{x: 35, y: 30}, {x: 35, y: 70}],
+                [{x: 55, y: 30}, {x: 55, y: 70}]
             ],
             'ㅟ': [
-                { top: 20, left: 30, rotate: 0, delay: 0 },
-                { top: 20, left: 50, rotate: 90, delay: 700 },
-                { top: 40, left: 70, rotate: 90, delay: 1400 }
+                [{x: 30, y: 35}, {x: 70, y: 35}],
+                [{x: 50, y: 25}, {x: 50, y: 45}],
+                [{x: 70, y: 30}, {x: 70, y: 70}]
             ],
             'ㅢ': [
-                { top: 50, left: 30, rotate: 0, delay: 0 },
-                { top: 20, left: 50, rotate: 90, delay: 700 }
+                [{x: 30, y: 50}, {x: 70, y: 50}],
+                [{x: 50, y: 30}, {x: 50, y: 70}]
             ],
             '가': [
-                { top: 35, left: 30, rotate: -3, delay: 0 },
-                { top: 35, left: 52, rotate: 90, delay: 700 },
-                { top: 35, left: 68, rotate: 90, delay: 1400 },
-                { top: 60, left: 52, rotate: 0, delay: 2100 }
+                [{x: 30, y: 35}, {x: 50, y: 35}],
+                [{x: 50, y: 35}, {x: 50, y: 50}],
+                [{x: 65, y: 25}, {x: 65, y: 50}],
+                [{x: 55, y: 37}, {x: 70, y: 37}]
             ],
             '나': [
-                { top: 50, left: 30, rotate: -3, delay: 0 },
-                { top: 50, left: 30, rotate: 180, delay: 700 },
-                { top: 35, left: 68, rotate: 90, delay: 1400 },
-                { top: 60, left: 52, rotate: 0, delay: 2100 }
+                [{x: 30, y: 45}, {x: 50, y: 45}],
+                [{x: 50, y: 45}, {x: 50, y: 65}],
+                [{x: 65, y: 25}, {x: 65, y: 50}],
+                [{x: 55, y: 37}, {x: 70, y: 37}]
             ],
             '다': [
-                { top: 35, left: 30, rotate: -3, delay: 0 },
-                { top: 35, left: 52, rotate: 90, delay: 700 },
-                { top: 65, left: 52, rotate: -3, delay: 1400 },
-                { top: 35, left: 68, rotate: 90, delay: 2100 },
-                { top: 60, left: 52, rotate: 0, delay: 2800 }
+                [{x: 30, y: 35}, {x: 50, y: 35}],
+                [{x: 50, y: 35}, {x: 50, y: 55}],
+                [{x: 30, y: 55}, {x: 50, y: 55}],
+                [{x: 65, y: 25}, {x: 65, y: 50}],
+                [{x: 55, y: 37}, {x: 70, y: 37}]
             ],
             '라': [
-                { top: 35, left: 30, rotate: -3, delay: 0 },
-                { top: 35, left: 52, rotate: 90, delay: 700 },
-                { top: 50, left: 30, rotate: -3, delay: 1400 },
-                { top: 50, left: 52, rotate: 90, delay: 2100 },
-                { top: 65, left: 30, rotate: -3, delay: 2800 },
-                { top: 35, left: 68, rotate: 90, delay: 3500 },
-                { top: 60, left: 52, rotate: 0, delay: 4200 }
+                [{x: 30, y: 30}, {x: 50, y: 30}],
+                [{x: 50, y: 30}, {x: 50, y: 40}],
+                [{x: 30, y: 40}, {x: 50, y: 40}],
+                [{x: 50, y: 40}, {x: 50, y: 50}],
+                [{x: 30, y: 50}, {x: 50, y: 50}],
+                [{x: 65, y: 25}, {x: 65, y: 50}],
+                [{x: 55, y: 37}, {x: 70, y: 37}]
             ]
         };
 
@@ -612,11 +614,14 @@
         };
 
         function generateAllCombinations() {
+            const limitedConsonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+            const limitedVowels = ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'];
+            
             dynamicWordSet = [];
-            for (let i = 0; i < consonants.length; i++) {
-                const chosungIndex = i;
-                for (let j = 0; j < vowels.length; j++) {
-                    const jungsungIndex = j;
+            for (let i = 0; i < limitedConsonants.length; i++) {
+                const chosungIndex = consonants.indexOf(limitedConsonants[i]);
+                for (let j = 0; j < limitedVowels.length; j++) {
+                    const jungsungIndex = vowels.indexOf(limitedVowels[j]);
                     const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
                     dynamicWordSet.push(String.fromCharCode(combinedCode));
                 }
@@ -681,41 +686,90 @@
             ctx.lineJoin = 'round';
             ctx.lineWidth = 15;
             ctx.strokeStyle = '#ff6347';
+
+            strokeGuideCanvas.width = strokeGuideCanvas.offsetWidth;
+            strokeGuideCanvas.height = strokeGuideCanvas.offsetHeight;
+            strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCtx.height);
+            strokeGuideCtx.lineCap = 'round';
+            strokeGuideCtx.lineJoin = 'round';
+            strokeGuideCtx.lineWidth = 3;
+            strokeGuideCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
         }
         
-        function showStrokeOrder(char) {
-            strokeGuideContainer.innerHTML = '';
-            const guides = strokeOrderData[char];
-            if (!guides) {
-                console.warn(`'${char}'에 대한 획 순서 데이터가 없습니다.`);
+        let animationFrameId;
+
+        function animateStroke(char) {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
+            const strokes = strokeOrderData[char];
+            if (!strokes) {
                 return;
             }
 
-            guides.forEach((guide, index) => {
-                const arrow = document.createElement('div');
-                arrow.className = 'stroke-arrow';
-                
-                arrow.style.opacity = '0';
-                arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg) scale(0.5)`;
-                
-                const startDelay = guide.delay + (index * 700); 
-                
-                setTimeout(() => {
-                    arrow.style.left = `${guide.left}%`;
-                    arrow.style.top = `${guide.top}%`;
-                    arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg) scale(1)`;
-                    arrow.style.opacity = '1';
-                }, startDelay);
-                
-                setTimeout(() => {
-                    arrow.style.opacity = '0';
-                    arrow.style.transform = `translate(-50%, -50%) rotate(${guide.rotate}deg) scale(0.5)`;
-                }, startDelay + 2000);
+            let startTime = null;
+            let currentStrokeIndex = 0;
+            const strokeDuration = 800;
+            const strokeDelay = 200;
 
-                strokeGuideContainer.appendChild(arrow);
-            });
+            function drawFrame(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+
+                if (currentStrokeIndex < strokes.length) {
+                    const stroke = strokes[currentStrokeIndex];
+                    
+                    const progress = Math.min(1, (elapsed - (currentStrokeIndex * (strokeDuration + strokeDelay))) / strokeDuration);
+                    
+                    strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
+                    
+                    for (let i = 0; i <= currentStrokeIndex; i++) {
+                        const prevStroke = strokes[i];
+                        const prevStartX = prevStroke[0].x / 100 * strokeGuideCanvas.width;
+                        const prevStartY = prevStroke[0].y / 100 * strokeGuideCanvas.height;
+                        
+                        if (prevStroke[0].type === 'circle') {
+                            const prevRadius = prevStroke[0].radius / 100 * Math.min(strokeGuideCanvas.width, strokeGuideCanvas.height);
+                            strokeGuideCtx.beginPath();
+                            strokeGuideCtx.arc(prevStartX, prevStartY, prevRadius, 0, Math.PI * 2);
+                            strokeGuideCtx.stroke();
+                        } else {
+                            const prevEndX = prevStroke[1].x / 100 * strokeGuideCanvas.width;
+                            const prevEndY = prevStroke[1].y / 100 * strokeGuideCanvas.height;
+                            strokeGuideCtx.beginPath();
+                            strokeGuideCtx.moveTo(prevStartX, prevStartY);
+                            strokeGuideCtx.lineTo(prevEndX, prevEndY);
+                            strokeGuideCtx.stroke();
+                        }
+                    }
+
+                    if (progress < 1) {
+                        const startX = stroke[0].x / 100 * strokeGuideCanvas.width;
+                        const startY = stroke[0].y / 100 * strokeGuideCanvas.height;
+                        const endX = stroke[1].x / 100 * strokeGuideCanvas.width;
+                        const endY = stroke[1].y / 100 * strokeGuideCanvas.height;
+
+                        const currentX = startX + (endX - startX) * progress;
+                        const currentY = startY + (endY - startY) * progress;
+                        
+                        strokeGuideCtx.beginPath();
+                        strokeGuideCtx.moveTo(startX, startY);
+                        strokeGuideCtx.lineTo(currentX, currentY);
+                        strokeGuideCtx.stroke();
+                    } else {
+                        currentStrokeIndex++;
+                        startTime = timestamp;
+                    }
+                } else {
+                    strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
+                    return;
+                }
+                animationFrameId = requestAnimationFrame(drawFrame);
+            }
+            animationFrameId = requestAnimationFrame(drawFrame);
         }
-        
+
         function resetDrawingState() {
             isDrawing = false;
             lastX = 0;
@@ -730,7 +784,7 @@
             initCanvas();
             renderCharList();
             switchPage('learning');
-            updateUI(); // 이제 페이지 로드 시 바로 UI 업데이트
+            updateUI(false);
         }
 
         function updateUI(playAndGuide = true) {
@@ -758,7 +812,7 @@
                 wordImage.src = currentData.img;
                 wordText.textContent = currentData.word;
                 wordInfo.style.opacity = 1;
-            } else if (currentMode === 'word_full') {
+            } else if (currentMode === 'word_limited') { // 수정된 모드
                 currentSet = dynamicWordSet;
                 charToDisplay = currentSet[currentIndex];
                 currentTitle.textContent = `${charToDisplay} 쓰기`;
@@ -766,13 +820,25 @@
                 wordInfo.style.opacity = 0;
             }
 
+            document.querySelectorAll('.char-list-btn').forEach(button => {
+                button.classList.remove('active');
+            });
+            const activeBtn = charListContainer.querySelector(`.char-list-btn:nth-child(${currentIndex + 1})`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
             if (playAndGuide) {
                 if (charToDisplay) {
                     playSound(charToDisplay);
-                    showStrokeOrder(charToDisplay);
+                    animateStroke(charToDisplay);
                 }
             } else {
-                strokeGuideContainer.innerHTML = '';
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
             }
         }
 
@@ -786,7 +852,7 @@
                 currentSet = charSets.vowel;
             } else if (currentMode === 'word') {
                 currentSet = charSets.word.map(item => item.char);
-            } else if (currentMode === 'word_full') {
+            } else if (currentMode === 'word_limited') { // 수정된 모드
                 currentSet = dynamicWordSet;
             }
 
@@ -878,7 +944,7 @@
 
         consonantBtn.addEventListener('click', () => setupLearning('consonant'));
         vowelBtn.addEventListener('click', () => setupLearning('vowel'));
-        wordBtn.addEventListener('click', () => setupLearning('word_full'));
+        wordBtn.addEventListener('click', () => setupLearning('word_limited')); // 수정된 모드
         backBtn.addEventListener('click', () => switchPage('start'));
 
         nextBtn.addEventListener('click', () => {
@@ -886,8 +952,8 @@
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
             else if (currentMode === 'word') currentSet = charSets.word;
-            else if (currentMode === 'word_full') currentSet = dynamicWordSet;
-
+            else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
+            
             currentIndex = (currentIndex + 1) % currentSet.length;
             resetDrawingState();
             initCanvas();
@@ -899,7 +965,7 @@
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
             else if (currentMode === 'word') currentSet = charSets.word;
-            else if (currentMode === 'word_full') currentSet = dynamicWordSet;
+            else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
             
             currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             resetDrawingState();
@@ -921,6 +987,7 @@
         
         initializeSpeechSynth().then(() => {
             console.log("Speech synthesis ready.");
+            generateAllCombinations();
         });
 
         window.addEventListener('resize', initCanvas);
