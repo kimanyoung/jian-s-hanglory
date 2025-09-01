@@ -102,9 +102,9 @@
             animation: fadeIn 1.5s ease-in-out;
             position: relative;
             background-color: #ffe4e1;
-            padding-bottom: 20px; /* 아래 여백 조정 */
+            padding-bottom: 20px;
             box-sizing: border-box;
-            overflow-y: auto; /* 내용이 많을 경우 스크롤 가능하게 */
+            overflow-y: auto;
         }
 
         #learning-page h2 {
@@ -149,15 +149,14 @@
             z-index: 10;
         }
 
-        /* 반응형 글자 목록 컨테이너 */
         #char-list-container {
             display: flex;
-            flex-wrap: wrap; /* 줄바꿈 적용 */
+            flex-wrap: wrap;
             justify-content: center;
             width: 90vw;
             max-width: 650px;
             margin: 20px auto;
-            gap: 10px; /* 버튼 사이 간격 */
+            gap: 10px;
             padding: 10px;
             background-color: #f7e1e1;
             border-radius: 15px;
@@ -174,7 +173,7 @@
             color: #d2691e;
             cursor: pointer;
             transition: background-color 0.2s, color 0.2s;
-            flex: 0 0 auto; /* 버튼 크기 자동 조절 */
+            flex: 0 0 auto;
         }
 
         .char-list-btn:hover,
@@ -427,10 +426,12 @@
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
-            initCanvas();
-            renderCharList();
             switchPage('learning');
-            updateUI();
+            setTimeout(() => { // 캔버스 로딩 후 약간의 딜레이를 줘서 안정적으로 작동하도록 수정
+                initCanvas();
+                renderCharList();
+                updateUI();
+            }, 100); // 0.1초 딜레이
         }
 
         function updateUI() {
