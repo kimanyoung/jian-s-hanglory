@@ -18,7 +18,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh; /* 화면 높이에 유연하게 대응 */
             text-align: center;
             flex-direction: column;
             overflow: hidden;
@@ -32,6 +32,7 @@
             justify-content: center;
             align-items: center;
             flex-direction: column;
+            box-sizing: border-box; /* 패딩이 전체 크기에 포함되도록 설정 */
         }
 
         #start-page {
@@ -45,6 +46,7 @@
             background-position: center;
             width: 100%;
             height: 100%;
+            box-sizing: border-box;
         }
 
         #start-page h1 {
@@ -81,6 +83,7 @@
             cursor: pointer;
             box-shadow: 0 8px 15px rgba(0,0,0,0.2);
             transition: transform 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
         }
 
         .menu-button:active {
@@ -95,14 +98,15 @@
         #learning-page {
             display: none;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between; /* 요소들을 위/아래로 분산 */
             align-items: center;
             width: 100%;
             height: 100%;
+            min-height: 100vh;
             animation: fadeIn 1.5s ease-in-out;
             position: relative;
             background-color: #ffe4e1;
-            padding-bottom: 20px;
+            padding: 20px; /* 모든 방향에 패딩 추가 */
             box-sizing: border-box;
             overflow-y: auto;
         }
@@ -125,6 +129,9 @@
             background-color: #fff8f5;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             overflow: hidden;
+            flex-grow: 1; /* 남는 공간을 차지하도록 설정 */
+            margin-bottom: 20px;
+            box-sizing: border-box;
         }
 
         #guide-char {
@@ -155,12 +162,13 @@
             justify-content: center;
             width: 90vw;
             max-width: 650px;
-            margin: 20px auto;
+            margin-bottom: 20px;
             gap: 10px;
             padding: 10px;
             background-color: #f7e1e1;
             border-radius: 15px;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
         }
 
         .char-list-btn {
@@ -174,6 +182,7 @@
             cursor: pointer;
             transition: background-color 0.2s, color 0.2s;
             flex: 0 0 auto;
+            box-sizing: border-box;
         }
 
         .char-list-btn:hover,
@@ -188,7 +197,7 @@
             align-items: center;
             width: 90vw;
             max-width: 650px;
-            margin-top: 3vh;
+            box-sizing: border-box;
         }
 
         .nav-btn, #back-btn {
@@ -200,16 +209,19 @@
             cursor: pointer;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             transition: transform 0.3s;
+            box-sizing: border-box;
         }
 
         .nav-btn {
             background-color: #ff8e72;
-            order: 2;
+            flex: 1; /* 버튼이 남는 공간을 차지하도록 */
+            margin: 0 5px;
         }
         
         #back-btn {
             background-color: #6c757d;
-            order: 3;
+            flex: 1;
+            margin: 0 5px;
         }
 
         .nav-btn:active, #back-btn:active {
@@ -223,6 +235,7 @@
             margin-top: 2vh;
             opacity: 0;
             transition: opacity 0.5s;
+            box-sizing: border-box;
         }
 
         #word-image {
@@ -320,8 +333,9 @@
         let lastX = 0;
         let lastY = 0;
         let speechSynthInitialized = false;
-        let animationFrameId;
 
+        const CHOSUNG_START_CODE = 0x1100;
+        const JUNGSUNG_START_CODE = 0x1161;
         const HANGUL_START_CODE = 0xac00;
 
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
@@ -340,19 +354,37 @@
             ]
         };
 
+        // 글자 조합 생성 함수 수정
         function generateAllCombinations() {
             const limitedConsonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
             const limitedVowels = ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'];
             
             dynamicWordSet = [];
+            
+            // 유니코드 조합을 위한 매핑
+            const chosungMap = {
+                'ㄱ': 0, 'ㄴ': 2, 'ㄷ': 3, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅅ': 9, 'ㅇ': 11,
+                'ㅈ': 12, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16, 'ㅍ': 17, 'ㅎ': 18
+            };
+            const jungsungMap = {
+                'ㅏ': 0, 'ㅑ': 2, 'ㅓ': 4, 'ㅕ': 6, 'ㅗ': 8, 'ㅛ': 12, 'ㅜ': 13, 'ㅠ': 17,
+                'ㅡ': 18, 'ㅣ': 19
+            };
+            
             for (let i = 0; i < limitedConsonants.length; i++) {
-                const chosungIndex = consonants.indexOf(limitedConsonants[i]);
+                const chosung = limitedConsonants[i];
+                const chosungIndex = chosungMap[chosung];
+                
+                if (chosungIndex === undefined) continue;
+
                 for (let j = 0; j < limitedVowels.length; j++) {
-                    const jungsungIndex = vowels.indexOf(limitedVowels[j]);
-                    if (chosungIndex !== -1 && jungsungIndex !== -1) {
-                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
-                         dynamicWordSet.push(String.fromCharCode(combinedCode));
-                    }
+                    const jungsung = limitedVowels[j];
+                    const jungsungIndex = jungsungMap[jungsung];
+                    
+                    if (jungsungIndex === undefined) continue;
+
+                    const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 + jungsungIndex) * 28;
+                    dynamicWordSet.push(String.fromCharCode(combinedCode));
                 }
             }
         }
@@ -453,12 +485,19 @@
             } else if (currentMode === 'word') {
                 currentSet = charSets.word;
                 const currentData = currentSet[currentIndex];
-                charToDisplay = currentData.char;
-                currentTitle.textContent = `${charToDisplay} 쓰기`;
-                guideChar.textContent = charToDisplay;
-                wordImage.src = currentData.img;
-                wordText.textContent = currentData.word;
-                wordInfo.style.opacity = 1;
+                if (currentData) {
+                    charToDisplay = currentData.char;
+                    currentTitle.textContent = `${charToDisplay} 쓰기`;
+                    guideChar.textContent = charToDisplay;
+                    wordImage.src = currentData.img;
+                    wordText.textContent = currentData.word;
+                    wordInfo.style.opacity = 1;
+                } else {
+                    charToDisplay = '';
+                    currentTitle.textContent = '글자가 없습니다.';
+                    guideChar.textContent = '';
+                    wordInfo.style.opacity = 0;
+                }
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
                 charToDisplay = currentSet[currentIndex];
@@ -603,13 +642,19 @@
 
         wordImage.addEventListener('click', () => {
             if (currentMode === 'word') {
-                playSound(charSets.word[currentIndex].word);
+                const currentData = charSets.word[currentIndex];
+                if (currentData) {
+                    playSound(currentData.word);
+                }
             }
         });
 
         wordText.addEventListener('click', () => {
             if (currentMode === 'word') {
-                playSound(charSets.word[currentIndex].word);
+                const currentData = charSets.word[currentIndex];
+                if (currentData) {
+                    playSound(currentData.word);
+                }
             }
         });
         
