@@ -102,7 +102,9 @@
             animation: fadeIn 1.5s ease-in-out;
             position: relative;
             background-color: #ffe4e1;
-            padding-bottom: 50px;
+            padding-bottom: 20px; /* 아래 여백 조정 */
+            box-sizing: border-box;
+            overflow-y: auto; /* 내용이 많을 경우 스크롤 가능하게 */
         }
 
         #learning-page h2 {
@@ -124,16 +126,6 @@
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        
-        #stroke-guide-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 20;
-            pointer-events: none;
-        }
 
         #guide-char {
             position: absolute;
@@ -147,14 +139,6 @@
             z-index: 5;
         }
         
-        #stroke-guide-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
         canvas {
             position: absolute;
             top: 0;
@@ -165,39 +149,32 @@
             z-index: 10;
         }
 
-        #learning-content-wrapper {
-            display: flex;
-            flex-direction: row;
-            width: 100%;
-            height: 100%;
-            justify-content: center;
-            align-items: center;
-        }
-
+        /* 반응형 글자 목록 컨테이너 */
         #char-list-container {
-            flex: 0 0 15%;
-            max-width: 100px;
-            height: 100%;
-            background-color: #f7e1e1;
-            overflow-y: auto;
-            border-right: 2px solid #ff8e72;
-            box-shadow: inset -5px 0 5px rgba(0,0,0,0.05);
-            padding: 10px 0;
             display: flex;
-            flex-direction: column;
-            gap: 5px;
+            flex-wrap: wrap; /* 줄바꿈 적용 */
+            justify-content: center;
+            width: 90vw;
+            max-width: 650px;
+            margin: 20px auto;
+            gap: 10px; /* 버튼 사이 간격 */
+            padding: 10px;
+            background-color: #f7e1e1;
+            border-radius: 15px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.1);
         }
 
         .char-list-btn {
-            width: 100%;
-            padding: 10px 0;
+            padding: 10px 15px;
             background: none;
-            border: none;
-            font-size: 4vw;
+            border: 2px solid #ff8e72;
+            border-radius: 10px;
+            font-size: 3vw;
             font-weight: bold;
             color: #d2691e;
             cursor: pointer;
             transition: background-color 0.2s, color 0.2s;
+            flex: 0 0 auto; /* 버튼 크기 자동 조절 */
         }
 
         .char-list-btn:hover,
@@ -303,16 +280,11 @@
 
         <div id="learning-page">
             <h2 id="current-title">자음 배우기</h2>
-            <div id="learning-content-wrapper">
-                <div id="char-list-container"></div>
-                <div id="drawing-area">
-                    <div id="stroke-guide-container">
-                        <canvas id="stroke-guide-canvas"></canvas>
-                    </div>
-                    <div id="guide-char"></div>
-                    <canvas id="drawing-canvas"></canvas>
-                </div>
+            <div id="drawing-area">
+                <div id="guide-char"></div>
+                <canvas id="drawing-canvas"></canvas>
             </div>
+            <div id="char-list-container"></div>
             <div id="word-info">
                 <img id="word-image" src="" alt="">
                 <div id="word-text"></div>
@@ -335,7 +307,6 @@
         const currentTitle = document.getElementById('current-title');
         const guideChar = document.getElementById('guide-char');
         const canvas = document.getElementById('drawing-canvas');
-        const strokeGuideCanvas = document.getElementById('stroke-guide-canvas');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const wordInfo = document.getElementById('word-info');
@@ -343,16 +314,13 @@
         const wordText = document.getElementById('word-text');
         const backBtn = document.getElementById('back-btn');
         const charListContainer = document.getElementById('char-list-container');
-        const learningContentWrapper = document.getElementById('learning-content-wrapper');
 
         const ctx = canvas.getContext('2d');
-        const strokeGuideCtx = strokeGuideCanvas.getContext('2d');
 
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
         let speechSynthInitialized = false;
-        let isFirstTouchHandled = false;
 
         const CHOSUNG_START_CODE = 0x1100;
         const JUNGSUNG_START_CODE = 0x1161;
@@ -363,242 +331,6 @@
         const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
         
         let dynamicWordSet = [];
-
-        const strokeOrderData = {
-            'ㄱ': [
-                [{x: 30, y: 40}, {x: 65, y: 40}],
-                [{x: 65, y: 40}, {x: 65, y: 70}]
-            ],
-            'ㄴ': [
-                [{x: 30, y: 50}, {x: 65, y: 50}],
-                [{x: 65, y: 50}, {x: 65, y: 80}]
-            ],
-            'ㄷ': [
-                [{x: 30, y: 40}, {x: 65, y: 40}],
-                [{x: 65, y: 40}, {x: 65, y: 70}],
-                [{x: 30, y: 70}, {x: 65, y: 70}]
-            ],
-            'ㄹ': [
-                [{x: 30, y: 40}, {x: 65, y: 40}],
-                [{x: 65, y: 40}, {x: 65, y: 55}],
-                [{x: 30, y: 55}, {x: 65, y: 55}],
-                [{x: 65, y: 55}, {x: 65, y: 70}],
-                [{x: 30, y: 70}, {x: 65, y: 70}]
-            ],
-            'ㅁ': [
-                [{x: 30, y: 40}, {x: 65, y: 40}],
-                [{x: 65, y: 40}, {x: 65, y: 70}],
-                [{x: 65, y: 70}, {x: 30, y: 70}],
-                [{x: 30, y: 70}, {x: 30, y: 40}]
-            ],
-            'ㅂ': [
-                [{x: 30, y: 40}, {x: 30, y: 70}],
-                [{x: 65, y: 40}, {x: 65, y: 70}],
-                [{x: 30, y: 55}, {x: 65, y: 55}],
-                [{x: 30, y: 70}, {x: 65, y: 70}]
-            ],
-            'ㅅ': [
-                [{x: 50, y: 40}, {x: 35, y: 70}],
-                [{x: 50, y: 40}, {x: 65, y: 70}]
-            ],
-            'ㅇ': [
-                [{x: 50, y: 55, type: 'circle', radius: 18}]
-            ],
-            'ㅈ': [
-                [{x: 40, y: 40}, {x: 60, y: 40}],
-                [{x: 50, y: 40}, {x: 35, y: 70}],
-                [{x: 50, y: 40}, {x: 65, y: 70}]
-            ],
-            'ㅊ': [
-                [{x: 45, y: 30}, {x: 55, y: 30}],
-                [{x: 50, y: 40}, {x: 35, y: 70}],
-                [{x: 50, y: 40}, {x: 65, y: 70}],
-                [{x: 50, y: 70}, {x: 50, y: 80}]
-            ],
-            'ㅋ': [
-                [{x: 30, y: 40}, {x: 65, y: 40}],
-                [{x: 30, y: 55}, {x: 65, y: 55}],
-                [{x: 30, y: 70}, {x: 65, y: 70}]
-            ],
-            'ㅌ': [
-                [{x: 30, y: 35}, {x: 65, y: 35}],
-                [{x: 30, y: 50}, {x: 65, y: 50}],
-                [{x: 30, y: 65}, {x: 65, y: 65}],
-                [{x: 30, y: 50}, {x: 65, y: 50}]
-            ],
-            'ㅍ': [
-                [{x: 30, y: 40}, {x: 65, y: 40}],
-                [{x: 30, y: 70}, {x: 65, y: 70}],
-                [{x: 30, y: 40}, {x: 30, y: 70}],
-                [{x: 65, y: 40}, {x: 65, y: 70}]
-            ],
-            'ㅎ': [
-                [{x: 40, y: 35}, {x: 60, y: 35}],
-                [{x: 40, y: 50}, {x: 60, y: 50}],
-                [{x: 50, y: 65, type: 'circle', radius: 10}]
-            ],
-            'ㄲ': [
-                [{x: 30, y: 40}, {x: 50, y: 40}],
-                [{x: 50, y: 40}, {x: 50, y: 70}],
-                [{x: 55, y: 40}, {x: 75, y: 40}],
-                [{x: 75, y: 40}, {x: 75, y: 70}]
-            ],
-            'ㄸ': [
-                [{x: 30, y: 40}, {x: 50, y: 40}],
-                [{x: 50, y: 40}, {x: 50, y: 70}],
-                [{x: 55, y: 40}, {x: 75, y: 40}],
-                [{x: 75, y: 40}, {x: 75, y: 70}],
-                [{x: 30, y: 70}, {x: 75, y: 70}]
-            ],
-            'ㅃ': [
-                [{x: 30, y: 40}, {x: 30, y: 70}],
-                [{x: 50, y: 40}, {x: 50, y: 70}],
-                [{x: 30, y: 55}, {x: 50, y: 55}],
-                [{x: 30, y: 70}, {x: 50, y: 70}],
-                [{x: 55, y: 40}, {x: 55, y: 70}],
-                [{x: 75, y: 40}, {x: 75, y: 70}],
-                [{x: 55, y: 55}, {x: 75, y: 55}],
-                [{x: 55, y: 70}, {x: 75, y: 70}]
-            ],
-            'ㅆ': [
-                [{x: 40, y: 40}, {x: 25, y: 70}],
-                [{x: 40, y: 40}, {x: 55, y: 70}],
-                [{x: 60, y: 40}, {x: 45, y: 70}],
-                [{x: 60, y: 40}, {x: 75, y: 70}]
-            ],
-            'ㅉ': [
-                [{x: 40, y: 30}, {x: 60, y: 30}],
-                [{x: 40, y: 45}, {x: 60, y: 45}],
-                [{x: 50, y: 45}, {x: 35, y: 75}],
-                [{x: 50, y: 45}, {x: 65, y: 75}]
-            ],
-            'ㅏ': [
-                [{x: 65, y: 30}, {x: 65, y: 70}],
-                [{x: 55, y: 50}, {x: 70, y: 50}]
-            ],
-            'ㅑ': [
-                [{x: 65, y: 30}, {x: 65, y: 70}],
-                [{x: 55, y: 40}, {x: 70, y: 40}],
-                [{x: 55, y: 55}, {x: 70, y: 55}]
-            ],
-            'ㅓ': [
-                [{x: 35, y: 50}, {x: 50, y: 50}],
-                [{x: 45, y: 30}, {x: 45, y: 70}]
-            ],
-            'ㅕ': [
-                [{x: 35, y: 40}, {x: 50, y: 40}],
-                [{x: 35, y: 55}, {x: 50, y: 55}],
-                [{x: 45, y: 30}, {x: 45, y: 70}]
-            ],
-            'ㅗ': [
-                [{x: 30, y: 65}, {x: 70, y: 65}],
-                [{x: 50, y: 55}, {x: 50, y: 75}]
-            ],
-            'ㅛ': [
-                [{x: 30, y: 65}, {x: 70, y: 65}],
-                [{x: 40, y: 55}, {x: 40, y: 75}],
-                [{x: 60, y: 55}, {x: 60, y: 75}]
-            ],
-            'ㅜ': [
-                [{x: 30, y: 35}, {x: 70, y: 35}],
-                [{x: 50, y: 25}, {x: 50, y: 45}]
-            ],
-            'ㅠ': [
-                [{x: 30, y: 35}, {x: 70, y: 35}],
-                [{x: 40, y: 25}, {x: 40, y: 45}],
-                [{x: 60, y: 25}, {x: 60, y: 45}]
-            ],
-            'ㅡ': [
-                [{x: 30, y: 50}, {x: 70, y: 50}]
-            ],
-            'ㅣ': [
-                [{x: 50, y: 30}, {x: 50, y: 70}]
-            ],
-            'ㅐ': [
-                [{x: 35, y: 30}, {x: 35, y: 70}],
-                [{x: 65, y: 30}, {x: 65, y: 70}],
-                [{x: 50, y: 50}, {x: 70, y: 50}]
-            ],
-            'ㅔ': [
-                [{x: 30, y: 50}, {x: 50, y: 50}],
-                [{x: 45, y: 30}, {x: 45, y: 70}],
-                [{x: 70, y: 30}, {x: 70, y: 70}]
-            ],
-            'ㅖ': [
-                [{x: 30, y: 40}, {x: 50, y: 40}],
-                [{x: 30, y: 55}, {x: 50, y: 55}],
-                [{x: 45, y: 30}, {x: 45, y: 70}],
-                [{x: 70, y: 30}, {x: 70, y: 70}]
-            ],
-            'ㅘ': [
-                [{x: 30, y: 65}, {x: 70, y: 65}],
-                [{x: 50, y: 55}, {x: 50, y: 75}],
-                [{x: 70, y: 30}, {x: 70, y: 60}],
-                [{x: 60, y: 45}, {x: 75, y: 45}]
-            ],
-            'ㅙ': [
-                [{x: 30, y: 65}, {x: 70, y: 65}],
-                [{x: 50, y: 55}, {x: 50, y: 75}],
-                [{x: 65, y: 30}, {x: 65, y: 60}],
-                [{x: 80, y: 30}, {x: 80, y: 60}],
-                [{x: 72, y: 45}, {x: 87, y: 45}]
-            ],
-            'ㅚ': [
-                [{x: 30, y: 65}, {x: 70, y: 65}],
-                [{x: 50, y: 55}, {x: 50, y: 75}],
-                [{x: 75, y: 30}, {x: 75, y: 70}]
-            ],
-            'ㅝ': [
-                [{x: 30, y: 35}, {x: 70, y: 35}],
-                [{x: 50, y: 25}, {x: 50, y: 45}],
-                [{x: 25, y: 50}, {x: 40, y: 50}],
-                [{x: 35, y: 30}, {x: 35, y: 70}]
-            ],
-            'ㅞ': [
-                [{x: 30, y: 35}, {x: 70, y: 35}],
-                [{x: 50, y: 25}, {x: 50, y: 45}],
-                [{x: 25, y: 50}, {x: 40, y: 50}],
-                [{x: 35, y: 30}, {x: 35, y: 70}],
-                [{x: 55, y: 30}, {x: 55, y: 70}]
-            ],
-            'ㅟ': [
-                [{x: 30, y: 35}, {x: 70, y: 35}],
-                [{x: 50, y: 25}, {x: 50, y: 45}],
-                [{x: 70, y: 30}, {x: 70, y: 70}]
-            ],
-            'ㅢ': [
-                [{x: 30, y: 50}, {x: 70, y: 50}],
-                [{x: 50, y: 30}, {x: 50, y: 70}]
-            ],
-            '가': [
-                [{x: 30, y: 35}, {x: 50, y: 35}],
-                [{x: 50, y: 35}, {x: 50, y: 50}],
-                [{x: 65, y: 25}, {x: 65, y: 50}],
-                [{x: 55, y: 37}, {x: 70, y: 37}]
-            ],
-            '나': [
-                [{x: 30, y: 45}, {x: 50, y: 45}],
-                [{x: 50, y: 45}, {x: 50, y: 65}],
-                [{x: 65, y: 25}, {x: 65, y: 50}],
-                [{x: 55, y: 37}, {x: 70, y: 37}]
-            ],
-            '다': [
-                [{x: 30, y: 35}, {x: 50, y: 35}],
-                [{x: 50, y: 35}, {x: 50, y: 55}],
-                [{x: 30, y: 55}, {x: 50, y: 55}],
-                [{x: 65, y: 25}, {x: 65, y: 50}],
-                [{x: 55, y: 37}, {x: 70, y: 37}]
-            ],
-            '라': [
-                [{x: 30, y: 30}, {x: 50, y: 30}],
-                [{x: 50, y: 30}, {x: 50, y: 40}],
-                [{x: 30, y: 40}, {x: 50, y: 40}],
-                [{x: 50, y: 40}, {x: 50, y: 50}],
-                [{x: 30, y: 50}, {x: 50, y: 50}],
-                [{x: 65, y: 25}, {x: 65, y: 50}],
-                [{x: 55, y: 37}, {x: 70, y: 37}]
-            ]
-        };
 
         const charSets = {
             consonant: consonants,
@@ -684,90 +416,8 @@
             ctx.lineJoin = 'round';
             ctx.lineWidth = 15;
             ctx.strokeStyle = '#ff6347';
-
-            strokeGuideCanvas.width = strokeGuideCanvas.offsetWidth;
-            strokeGuideCanvas.height = strokeGuideCanvas.offsetHeight;
-            strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
-            strokeGuideCtx.lineCap = 'round';
-            strokeGuideCtx.lineJoin = 'round';
-            strokeGuideCtx.lineWidth = 3;
-            strokeGuideCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
         }
         
-        let animationFrameId;
-
-        function animateStroke(char) {
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
-            const strokes = strokeOrderData[char];
-            if (!strokes) {
-                return;
-            }
-
-            let startTime = null;
-            let currentStrokeIndex = 0;
-            const strokeDuration = 800;
-            const strokeDelay = 200;
-
-            function drawFrame(timestamp) {
-                if (!startTime) startTime = timestamp;
-                const elapsed = timestamp - startTime;
-
-                if (currentStrokeIndex < strokes.length) {
-                    const stroke = strokes[currentStrokeIndex];
-                    
-                    const progress = Math.min(1, (elapsed - (currentStrokeIndex * (strokeDuration + strokeDelay))) / strokeDuration);
-                    
-                    strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
-                    
-                    for (let i = 0; i <= currentStrokeIndex; i++) {
-                        const prevStroke = strokes[i];
-                        const prevStartX = prevStroke[0].x / 100 * strokeGuideCanvas.width;
-                        const prevStartY = prevStroke[0].y / 100 * strokeGuideCanvas.height;
-                        
-                        if (prevStroke[0].type === 'circle') {
-                            const prevRadius = prevStroke[0].radius / 100 * Math.min(strokeGuideCanvas.width, strokeGuideCanvas.height);
-                            strokeGuideCtx.beginPath();
-                            strokeGuideCtx.arc(prevStartX, prevStartY, prevRadius, 0, Math.PI * 2);
-                            strokeGuideCtx.stroke();
-                        } else {
-                            const prevEndX = prevStroke[1].x / 100 * strokeGuideCanvas.width;
-                            const prevEndY = prevStroke[1].y / 100 * strokeGuideCanvas.height;
-                            strokeGuideCtx.beginPath();
-                            strokeGuideCtx.moveTo(prevStartX, prevStartY);
-                            strokeGuideCtx.lineTo(prevEndX, prevEndY);
-                            strokeGuideCtx.stroke();
-                        }
-                    }
-
-                    if (progress < 1) {
-                        const startX = stroke[0].x / 100 * strokeGuideCanvas.width;
-                        const startY = stroke[0].y / 100 * strokeGuideCanvas.height;
-                        const endX = stroke[1].x / 100 * strokeGuideCanvas.width;
-                        const endY = stroke[1].y / 100 * strokeGuideCanvas.height;
-
-                        const currentX = startX + (endX - startX) * progress;
-                        const currentY = startY + (endY - startY) * progress;
-                        
-                        strokeGuideCtx.beginPath();
-                        strokeGuideCtx.moveTo(startX, startY);
-                        strokeGuideCtx.lineTo(currentX, currentY);
-                        strokeGuideCtx.stroke();
-                    } else {
-                        currentStrokeIndex++;
-                        startTime = timestamp;
-                    }
-                } else {
-                    strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
-                    return;
-                }
-                animationFrameId = requestAnimationFrame(drawFrame);
-            }
-            animationFrameId = requestAnimationFrame(drawFrame);
-        }
-
         function resetDrawingState() {
             isDrawing = false;
             lastX = 0;
@@ -777,15 +427,13 @@
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
-            isFirstTouchHandled = false;
-            
             initCanvas();
             renderCharList();
             switchPage('learning');
-            updateUI(false);
+            updateUI();
         }
 
-        function updateUI(playAndGuide = true) {
+        function updateUI() {
             let currentSet;
             let charToDisplay;
             
@@ -824,19 +472,10 @@
             const activeBtn = charListContainer.querySelector(`.char-list-btn:nth-child(${currentIndex + 1})`);
             if (activeBtn) {
                 activeBtn.classList.add('active');
-                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
-            if (playAndGuide) {
-                if (charToDisplay) {
-                    playSound(charToDisplay);
-                    animateStroke(charToDisplay);
-                }
-            } else {
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                }
-                strokeGuideCtx.clearRect(0, 0, strokeGuideCanvas.width, strokeGuideCanvas.height);
+            if (charToDisplay) {
+                playSound(charToDisplay);
             }
         }
 
@@ -863,17 +502,10 @@
                         currentIndex = index;
                         resetDrawingState();
                         initCanvas();
-                        updateUI(true);
+                        updateUI();
                     });
                     charListContainer.appendChild(button);
                 });
-            }
-        }
-
-        function handleFirstTouch() {
-            if (!isFirstTouchHandled) {
-                isFirstTouchHandled = true;
-                updateUI(true);
             }
         }
 
@@ -906,9 +538,6 @@
         }
 
         function startDrawing(e) {
-            if (!isFirstTouchHandled) {
-                handleFirstTouch();
-            }
             isDrawing = true;
             if (e.touches) {
                 e.preventDefault();
@@ -955,7 +584,7 @@
             currentIndex = (currentIndex + 1) % currentSet.length;
             resetDrawingState();
             initCanvas();
-            updateUI(true);
+            updateUI();
         });
 
         prevBtn.addEventListener('click', () => {
@@ -968,7 +597,7 @@
             currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             resetDrawingState();
             initCanvas();
-            updateUI(true);
+            updateUI();
         });
 
         wordImage.addEventListener('click', () => {
