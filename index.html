@@ -320,10 +320,8 @@
         let lastX = 0;
         let lastY = 0;
         let speechSynthInitialized = false;
+        let animationFrameId;
 
-        const CHOSUNG_START_CODE = 0x1100;
-        const JUNGSUNG_START_CODE = 0x1161;
-        const JONGSUNG_START_CODE = 0x11a7;
         const HANGUL_START_CODE = 0xac00;
 
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
@@ -428,10 +426,12 @@
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
-            initCanvas();
-            renderCharList();
             switchPage('learning');
-            updateUI();
+            setTimeout(() => {
+                initCanvas();
+                renderCharList();
+                updateUI();
+            }, 100);
         }
 
         function updateUI() {
