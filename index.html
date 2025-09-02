@@ -21,7 +21,7 @@
             min-height: 100vh;
             text-align: center;
             flex-direction: column;
-            overflow: hidden; /* 전체 화면 스크롤 금지 */
+            overflow: hidden;
             color: #5d4037;
             box-sizing: border-box;
         }
@@ -99,7 +99,7 @@
         #learning-page {
             display: none;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             width: 100%;
             height: 100%;
@@ -109,7 +109,7 @@
             background-color: #ffe4e1;
             padding: 20px;
             box-sizing: border-box;
-            overflow-y: hidden; /* 학습 페이지 전체 스크롤 금지 */
+            overflow-y: hidden;
         }
 
         #learning-page h2 {
@@ -118,15 +118,6 @@
             text-shadow: 2px 2px 0 #fff;
             margin-bottom: 2vh;
             flex-shrink: 0;
-        }
-        
-        #main-content-wrapper {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            align-items: center;
-            flex-grow: 1; /* 남는 공간을 모두 차지하도록 설정 */
-            overflow: hidden; /* 이 영역 안에서 스크롤이 발생하지 않도록 */
         }
 
         #drawing-area {
@@ -140,7 +131,7 @@
             background-color: #fff8f5;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             overflow: hidden;
-            flex-grow: 1;
+            margin-bottom: 20px;
             box-sizing: border-box;
         }
 
@@ -166,20 +157,20 @@
             z-index: 10;
         }
 
-        /* 스크롤 가능한 글자 목록 컨테이너 */
         #char-list-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             width: 90vw;
             max-width: 650px;
-            margin-top: 20px;
+            margin-bottom: 20px;
+            gap: 10px;
             padding: 10px;
             background-color: #f7e1e1;
             border-radius: 15px;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             box-sizing: border-box;
-            max-height: 150px; /* 고정 높이 */
+            max-height: 150px; /* 스크롤 가능하도록 고정 높이 지정 */
             overflow-y: auto; /* 이 영역만 스크롤 가능 */
         }
 
@@ -306,21 +297,19 @@
 
         <div id="learning-page">
             <h2 id="current-title">자음 배우기</h2>
-            <div id="main-content-wrapper">
-                <div id="drawing-area">
-                    <div id="guide-char"></div>
-                    <canvas id="drawing-canvas"></canvas>
-                </div>
-                <div class="navigation-buttons">
-                    <button id="prev-btn" class="nav-btn">이전</button>
-                    <button id="next-btn" class="nav-btn">다음</button>
-                    <button id="back-btn">뒤로 가기</button>
-                </div>
-                <div id="char-list-container"></div>
-                <div id="word-info">
-                    <img id="word-image" src="" alt="">
-                    <div id="word-text"></div>
-                </div>
+            <div id="drawing-area">
+                <div id="guide-char"></div>
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+            <div class="navigation-buttons">
+                <button id="prev-btn" class="nav-btn">이전</button>
+                <button id="next-btn" class="nav-btn">다음</button>
+                <button id="back-btn">뒤로 가기</button>
+            </div>
+            <div id="char-list-container"></div>
+            <div id="word-info">
+                <img id="word-image" src="" alt="">
+                <div id="word-text"></div>
             </div>
         </div>
     </div>
@@ -342,7 +331,6 @@
         const wordText = document.getElementById('word-text');
         const backBtn = document.getElementById('back-btn');
         const charListContainer = document.getElementById('char-list-container');
-        const mainContentWrapper = document.getElementById('main-content-wrapper');
 
         const ctx = canvas.getContext('2d');
 
@@ -375,12 +363,21 @@
             
             dynamicWordSet = [];
             
+            const chosungMap = {
+                'ㄱ': 0, 'ㄴ': 2, 'ㄷ': 3, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅅ': 9, 'ㅇ': 11,
+                'ㅈ': 12, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16, 'ㅍ': 17, 'ㅎ': 18
+            };
+            const jungsungMap = {
+                'ㅏ': 0, 'ㅑ': 2, 'ㅓ': 4, 'ㅕ': 6, 'ㅗ': 8, 'ㅛ': 12, 'ㅜ': 13, 'ㅠ': 17,
+                'ㅡ': 18, 'ㅣ': 19
+            };
+            
             limitedConsonants.forEach(chosung => {
                 limitedVowels.forEach(jungsung => {
-                    const chosungIndex = consonants.indexOf(chosung);
-                    const jungsungIndex = vowels.indexOf(jungsung);
+                    const chosungIndex = chosungMap[chosung];
+                    const jungsungIndex = jungsungMap[jungsung];
                     
-                    if (chosungIndex !== -1 && jungsungIndex !== -1) {
+                    if (chosungIndex !== undefined && jungsungIndex !== undefined) {
                          const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 + jungsungIndex) * 28;
                          dynamicWordSet.push(String.fromCharCode(combinedCode));
                     }
@@ -499,7 +496,7 @@
                 }
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
-                if (dynamicWordSet.length > 0) {
+                if (dynamicWordSet.length > 0 && currentIndex < dynamicWordSet.length) {
                      charToDisplay = currentSet[currentIndex];
                      currentTitle.textContent = `${charToDisplay} 쓰기`;
                      guideChar.textContent = charToDisplay;
