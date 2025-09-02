@@ -99,7 +99,7 @@
         #learning-page {
             display: none;
             flex-direction: column;
-            justify-content: flex-start;
+            justify-content: space-between;
             align-items: center;
             width: 100%;
             height: 100%;
@@ -170,8 +170,8 @@
             border-radius: 15px;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             box-sizing: border-box;
-            max-height: 150px; /* 스크롤 가능하도록 고정 높이 지정 */
-            overflow-y: auto; /* 이 영역만 스크롤 가능 */
+            max-height: 150px;
+            overflow-y: auto;
         }
 
         .char-list-btn {
@@ -363,21 +363,12 @@
             
             dynamicWordSet = [];
             
-            const chosungMap = {
-                'ㄱ': 0, 'ㄴ': 2, 'ㄷ': 3, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅅ': 9, 'ㅇ': 11,
-                'ㅈ': 12, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16, 'ㅍ': 17, 'ㅎ': 18
-            };
-            const jungsungMap = {
-                'ㅏ': 0, 'ㅑ': 2, 'ㅓ': 4, 'ㅕ': 6, 'ㅗ': 8, 'ㅛ': 12, 'ㅜ': 13, 'ㅠ': 17,
-                'ㅡ': 18, 'ㅣ': 19
-            };
-            
             limitedConsonants.forEach(chosung => {
                 limitedVowels.forEach(jungsung => {
-                    const chosungIndex = chosungMap[chosung];
-                    const jungsungIndex = jungsungMap[jungsung];
+                    const chosungIndex = consonants.indexOf(chosung);
+                    const jungsungIndex = vowels.indexOf(jungsung);
                     
-                    if (chosungIndex !== undefined && jungsungIndex !== undefined) {
+                    if (chosungIndex !== -1 && jungsungIndex !== -1) {
                          const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 + jungsungIndex) * 28;
                          dynamicWordSet.push(String.fromCharCode(combinedCode));
                     }
@@ -496,7 +487,7 @@
                 }
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
-                if (dynamicWordSet.length > 0 && currentIndex < dynamicWordSet.length) {
+                if (dynamicWordSet && dynamicWordSet.length > 0) {
                      charToDisplay = currentSet[currentIndex];
                      currentTitle.textContent = `${charToDisplay} 쓰기`;
                      guideChar.textContent = charToDisplay;
@@ -627,7 +618,9 @@
             else if (currentMode === 'word') currentSet = charSets.word;
             else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
             
-            currentIndex = (currentIndex + 1) % currentSet.length;
+            if (currentSet && currentSet.length > 0) {
+                currentIndex = (currentIndex + 1) % currentSet.length;
+            }
             resetDrawingState();
             initCanvas();
             updateUI();
@@ -640,9 +633,8 @@
             else if (currentMode === 'word') currentSet = charSets.word;
             else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
             
-            currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
-            if (currentIndex < 0) {
-                currentIndex = currentSet.length - 1;
+            if (currentSet && currentSet.length > 0) {
+                currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             }
             resetDrawingState();
             initCanvas();
