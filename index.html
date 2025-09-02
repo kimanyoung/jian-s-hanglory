@@ -301,16 +301,16 @@
                 <div id="guide-char"></div>
                 <canvas id="drawing-canvas"></canvas>
             </div>
+            <div id="word-info">
+                <img id="word-image" src="" alt="">
+                <div id="word-text"></div>
+            </div>
             <div class="navigation-buttons">
                 <button id="prev-btn" class="nav-btn">이전</button>
                 <button id="next-btn" class="nav-btn">다음</button>
                 <button id="back-btn">뒤로 가기</button>
             </div>
             <div id="char-list-container"></div>
-            <div id="word-info">
-                <img id="word-image" src="" alt="">
-                <div id="word-text"></div>
-            </div>
         </div>
     </div>
 
@@ -365,7 +365,7 @@
         const charSets = {
             consonant: consonants,
             vowel: vowels,
-            word: wordWithExamples
+            word: wordWithExamples // wordWithExamples로 변경
         };
 
         let currentMode = '';
@@ -468,7 +468,7 @@
                     charToDisplay = currentData.char;
                     currentTitle.textContent = `${charToDisplay} 쓰기`;
                     guideChar.textContent = charToDisplay;
-                    wordImage.src = ''; // 이미지 없음
+                    wordImage.src = '';
                     wordText.textContent = currentData.word;
                     wordInfo.style.opacity = 1;
                 } else {
