@@ -344,7 +344,10 @@
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
         const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
         
-        let dynamicWordSet = [];
+        // 140개 글자가 포함된 새로운 word_full 세트를 직접 추가
+        const word_full_set = [
+            '가', '갸', '거', '겨', '고', '교', '구', '규', '그', '기', '나', '냐', '너', '녀', '노', '뇨', '누', '뉴', '느', '니', '다', '댜', '더', '뎌', '도', '됴', '두', '듀', '드', '디', '라', '랴', '러', '려', '로', '료', '루', '류', '르', '리', '마', '먀', '머', '며', '모', '묘', '무', '뮤', '므', '미', '바', '뱌', '버', '벼', '보', '뵤', '부', '뷰', '브', '비', '사', '샤', '서', '셔', '소', '쇼', '수', '슈', '스', '시', '아', '야', '어', '여', '오', '요', '우', '유', '으', '이', '자', '쟈', '저', '져', '조', '죠', '주', '쥬', '즈', '지', '차', '챠', '처', '쳐', '초', '쵸', '추', '츄', '츠', '치', '카', '캬', '커', '켜', '코', '쿄', '쿠', '큐', '크', '키', '타', '탸', '터', '텨', '토', '툐', '투', '튜', '트', '티', '파', '퍄', '퍼', '펴', '포', '표', '푸', '퓨', '프', '피', '하', '햐', '허', '혀', '호', '효', '후', '휴', '흐', '히'
+        ];
 
         const charSets = {
             consonant: consonants,
@@ -354,27 +357,9 @@
                 { char: '나', word: '나비', img: 'https://cdn.pixabay.com/photo/2016/08/17/23/04/butterfly-1601666_1280.png' },
                 { char: '다', word: '다리', img: 'https://cdn.pixabay.com/photo/2017/04/04/18/14/bridge-2202271_1280.png' },
                 { char: '라', word: '라면', img: 'https://cdn.pixabay.com/photo/2020/05/20/09/27/noodle-5196328_1280.png' }
-            ]
+            ],
+            word_full: word_full_set
         };
-
-        function generateAllCombinations() {
-            const limitedConsonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
-            const limitedVowels = ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'];
-            
-            dynamicWordSet = [];
-            
-            limitedConsonants.forEach(chosung => {
-                limitedVowels.forEach(jungsung => {
-                    const chosungIndex = consonants.indexOf(chosung);
-                    const jungsungIndex = vowels.indexOf(jungsung);
-                    
-                    if (chosungIndex !== -1 && jungsungIndex !== -1) {
-                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
-                         dynamicWordSet.push(String.fromCharCode(combinedCode));
-                    }
-                });
-            });
-        }
 
         let currentMode = '';
         let currentIndex = 0;
@@ -485,9 +470,9 @@
                     guideChar.textContent = '';
                     wordInfo.style.opacity = 0;
                 }
-            } else if (currentMode === 'word_limited') {
-                currentSet = dynamicWordSet;
-                if (dynamicWordSet.length > 0) {
+            } else if (currentMode === 'word_full') {
+                currentSet = charSets.word_full;
+                if (currentSet && currentSet.length > 0) {
                      charToDisplay = currentSet[currentIndex];
                      currentTitle.textContent = `${charToDisplay} 쓰기`;
                      guideChar.textContent = charToDisplay;
@@ -522,8 +507,8 @@
                 currentSet = charSets.vowel;
             } else if (currentMode === 'word') {
                 currentSet = charSets.word.map(item => item.char);
-            } else if (currentMode === 'word_limited') {
-                currentSet = dynamicWordSet;
+            } else if (currentMode === 'word_full') {
+                currentSet = charSets.word_full;
             }
 
             if (currentSet && currentSet.length > 0) {
@@ -608,7 +593,7 @@
 
         consonantBtn.addEventListener('click', () => setupLearning('consonant'));
         vowelBtn.addEventListener('click', () => setupLearning('vowel'));
-        wordBtn.addEventListener('click', () => setupLearning('word')); // word_limited 모드를 다시 word 모드로 변경
+        wordBtn.addEventListener('click', () => setupLearning('word_full'));
         backBtn.addEventListener('click', () => switchPage('start'));
 
         nextBtn.addEventListener('click', () => {
@@ -616,6 +601,7 @@
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
             else if (currentMode === 'word') currentSet = charSets.word;
+            else if (currentMode === 'word_full') currentSet = charSets.word_full;
             
             currentIndex = (currentIndex + 1) % currentSet.length;
             resetDrawingState();
@@ -628,6 +614,7 @@
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
             else if (currentMode === 'word') currentSet = charSets.word;
+            else if (currentMode === 'word_full') currentSet = charSets.word_full;
             
             currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             if (currentIndex < 0) {
@@ -658,7 +645,6 @@
         
         initializeSpeechSynth().then(() => {
             console.log("Speech synthesis ready.");
-            // generateAllCombinations() 함수는 이제 호출하지 않습니다.
         });
 
         window.addEventListener('resize', initCanvas);
