@@ -23,7 +23,7 @@
             flex-direction: column;
             overflow: hidden;
             color: #5d4037;
-            box-sizing: border-box; /* 추가: 패딩과 보더가 크기에 포함되도록 */
+            box-sizing: border-box;
         }
 
         #app-container {
@@ -539,6 +539,7 @@
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
             }
+
             if (currentSet && currentSet.length > 0) {
                 currentSet.forEach((char, index) => {
                     const button = document.createElement('button');
@@ -552,6 +553,11 @@
                     });
                     charListContainer.appendChild(button);
                 });
+            } else if (currentMode === 'word_limited') {
+                 // dynamicWordSet이 비어있을 경우 메시지를 표시
+                const message = document.createElement('div');
+                message.textContent = '글자가 없습니다.';
+                charListContainer.appendChild(message);
             }
         }
 
@@ -641,6 +647,9 @@
             else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
             
             currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
+            if (currentIndex < 0) {
+                currentIndex = currentSet.length - 1;
+            }
             resetDrawingState();
             initCanvas();
             updateUI();
