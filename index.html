@@ -117,6 +117,16 @@
             color: #d2691e;
             text-shadow: 2px 2px 0 #fff;
             margin-bottom: 2vh;
+            flex-shrink: 0;
+        }
+
+        #drawing-area-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            flex-grow: 1;
+            box-sizing: border-box;
         }
 
         #drawing-area {
@@ -131,7 +141,6 @@
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
             overflow: hidden;
             flex-grow: 1;
-            margin-bottom: 20px;
             box-sizing: border-box;
         }
 
@@ -163,6 +172,7 @@
             justify-content: center;
             width: 90vw;
             max-width: 650px;
+            margin-top: 20px;
             margin-bottom: 20px;
             gap: 10px;
             padding: 10px;
@@ -337,8 +347,6 @@
         let lastY = 0;
         let speechSynthInitialized = false;
 
-        const CHOSUNG_START_CODE = 0x1100;
-        const JUNGSUNG_START_CODE = 0x1161;
         const HANGUL_START_CODE = 0xac00;
 
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
@@ -364,30 +372,23 @@
             dynamicWordSet = [];
             
             const chosungMap = {
-                'ㄱ': 0, 'ㄴ': 2, 'ㄷ': 3, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅅ': 9, 'ㅇ': 11,
-                'ㅈ': 12, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16, 'ㅍ': 17, 'ㅎ': 18
+                'ㄱ': 0, 'ㄲ': 1, 'ㄴ': 2, 'ㄷ': 3, 'ㄸ': 4, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅃ': 8, 'ㅅ': 9, 'ㅆ': 10, 'ㅇ': 11, 'ㅈ': 12, 'ㅉ': 13, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16, 'ㅍ': 17, 'ㅎ': 18
             };
             const jungsungMap = {
-                'ㅏ': 0, 'ㅑ': 2, 'ㅓ': 4, 'ㅕ': 6, 'ㅗ': 8, 'ㅛ': 12, 'ㅜ': 13, 'ㅠ': 17,
-                'ㅡ': 18, 'ㅣ': 19
+                'ㅏ': 0, 'ㅐ': 1, 'ㅑ': 2, 'ㅒ': 3, 'ㅓ': 4, 'ㅔ': 5, 'ㅕ': 6, 'ㅖ': 7, 'ㅗ': 8, 'ㅘ': 9, 'ㅙ': 10, 'ㅚ': 11, 'ㅛ': 12, 'ㅜ': 13, 'ㅝ': 14, 'ㅞ': 15, 'ㅟ': 16, 'ㅠ': 17, 'ㅡ': 18, 'ㅢ': 19, 'ㅣ': 20
             };
             
-            for (let i = 0; i < limitedConsonants.length; i++) {
-                const chosung = limitedConsonants[i];
-                const chosungIndex = chosungMap[chosung];
-                
-                if (chosungIndex === undefined) continue;
-
-                for (let j = 0; j < limitedVowels.length; j++) {
-                    const jungsung = limitedVowels[j];
+            limitedConsonants.forEach(chosung => {
+                limitedVowels.forEach(jungsung => {
+                    const chosungIndex = chosungMap[chosung];
                     const jungsungIndex = jungsungMap[jungsung];
                     
-                    if (jungsungIndex === undefined) continue;
-
-                    const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 + jungsungIndex) * 28;
-                    dynamicWordSet.push(String.fromCharCode(combinedCode));
-                }
-            }
+                    if (chosungIndex !== undefined && jungsungIndex !== undefined) {
+                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
+                         dynamicWordSet.push(String.fromCharCode(combinedCode));
+                    }
+                });
+            });
         }
 
         let currentMode = '';
@@ -469,7 +470,7 @@
 
         function updateUI() {
             let currentSet;
-            let charToDisplay;
+            let charToDisplay = '';
             
             if (currentMode === 'consonant') {
                 currentSet = charSets.consonant;
@@ -554,7 +555,6 @@
                     charListContainer.appendChild(button);
                 });
             } else if (currentMode === 'word_limited') {
-                 // dynamicWordSet이 비어있을 경우 메시지를 표시
                 const message = document.createElement('div');
                 message.textContent = '글자가 없습니다.';
                 charListContainer.appendChild(message);
