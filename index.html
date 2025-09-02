@@ -120,15 +120,6 @@
             flex-shrink: 0;
         }
 
-        #drawing-area-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            flex-grow: 1;
-            box-sizing: border-box;
-        }
-
         #drawing-area {
             position: relative;
             width: 80vw;
@@ -172,7 +163,6 @@
             justify-content: center;
             width: 90vw;
             max-width: 650px;
-            margin-top: 20px;
             margin-bottom: 20px;
             gap: 10px;
             padding: 10px;
@@ -210,7 +200,7 @@
             max-width: 650px;
             box-sizing: border-box;
             flex-shrink: 0;
-            margin-top: auto;
+            margin-top: 20px; /* 위치 변경을 위해 auto 삭제 */
         }
 
         .nav-btn, #back-btn {
@@ -309,15 +299,15 @@
                 <div id="guide-char"></div>
                 <canvas id="drawing-canvas"></canvas>
             </div>
-            <div id="char-list-container"></div>
-            <div id="word-info">
-                <img id="word-image" src="" alt="">
-                <div id="word-text"></div>
-            </div>
             <div class="navigation-buttons">
                 <button id="prev-btn" class="nav-btn">이전</button>
                 <button id="next-btn" class="nav-btn">다음</button>
                 <button id="back-btn">뒤로 가기</button>
+            </div>
+            <div id="char-list-container"></div>
+            <div id="word-info">
+                <img id="word-image" src="" alt="">
+                <div id="word-text"></div>
             </div>
         </div>
     </div>
@@ -347,6 +337,8 @@
         let lastY = 0;
         let speechSynthInitialized = false;
 
+        const CHOSUNG_START_CODE = 0x1100;
+        const JUNGSUNG_START_CODE = 0x1161;
         const HANGUL_START_CODE = 0xac00;
 
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
@@ -371,20 +363,13 @@
             
             dynamicWordSet = [];
             
-            const chosungMap = {
-                'ㄱ': 0, 'ㄲ': 1, 'ㄴ': 2, 'ㄷ': 3, 'ㄸ': 4, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅃ': 8, 'ㅅ': 9, 'ㅆ': 10, 'ㅇ': 11, 'ㅈ': 12, 'ㅉ': 13, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16, 'ㅍ': 17, 'ㅎ': 18
-            };
-            const jungsungMap = {
-                'ㅏ': 0, 'ㅐ': 1, 'ㅑ': 2, 'ㅒ': 3, 'ㅓ': 4, 'ㅔ': 5, 'ㅕ': 6, 'ㅖ': 7, 'ㅗ': 8, 'ㅘ': 9, 'ㅙ': 10, 'ㅚ': 11, 'ㅛ': 12, 'ㅜ': 13, 'ㅝ': 14, 'ㅞ': 15, 'ㅟ': 16, 'ㅠ': 17, 'ㅡ': 18, 'ㅢ': 19, 'ㅣ': 20
-            };
-            
             limitedConsonants.forEach(chosung => {
                 limitedVowels.forEach(jungsung => {
-                    const chosungIndex = chosungMap[chosung];
-                    const jungsungIndex = jungsungMap[jungsung];
+                    const chosungIndex = consonants.indexOf(chosung);
+                    const jungsungIndex = vowels.indexOf(jungsung);
                     
-                    if (chosungIndex !== undefined && jungsungIndex !== undefined) {
-                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
+                    if (chosungIndex !== -1 && jungsungIndex !== -1) {
+                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 + jungsungIndex) * 28;
                          dynamicWordSet.push(String.fromCharCode(combinedCode));
                     }
                 });
@@ -470,7 +455,7 @@
 
         function updateUI() {
             let currentSet;
-            let charToDisplay = '';
+            let charToDisplay;
             
             if (currentMode === 'consonant') {
                 currentSet = charSets.consonant;
