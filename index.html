@@ -99,7 +99,7 @@
         #learning-page {
             display: none;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             width: 100%;
             height: 100%;
@@ -369,7 +369,7 @@
                     const jungsungIndex = vowels.indexOf(jungsung);
                     
                     if (chosungIndex !== -1 && jungsungIndex !== -1) {
-                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 + jungsungIndex) * 28;
+                         const combinedCode = HANGUL_START_CODE + (chosungIndex * 21 * 28) + (jungsungIndex * 28);
                          dynamicWordSet.push(String.fromCharCode(combinedCode));
                     }
                 });
@@ -487,7 +487,7 @@
                 }
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
-                if (dynamicWordSet && dynamicWordSet.length > 0) {
+                if (dynamicWordSet.length > 0) {
                      charToDisplay = currentSet[currentIndex];
                      currentTitle.textContent = `${charToDisplay} 쓰기`;
                      guideChar.textContent = charToDisplay;
@@ -608,7 +608,7 @@
 
         consonantBtn.addEventListener('click', () => setupLearning('consonant'));
         vowelBtn.addEventListener('click', () => setupLearning('vowel'));
-        wordBtn.addEventListener('click', () => setupLearning('word_limited'));
+        wordBtn.addEventListener('click', () => setupLearning('word')); // word_limited 모드를 다시 word 모드로 변경
         backBtn.addEventListener('click', () => switchPage('start'));
 
         nextBtn.addEventListener('click', () => {
@@ -616,11 +616,8 @@
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
             else if (currentMode === 'word') currentSet = charSets.word;
-            else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
             
-            if (currentSet && currentSet.length > 0) {
-                currentIndex = (currentIndex + 1) % currentSet.length;
-            }
+            currentIndex = (currentIndex + 1) % currentSet.length;
             resetDrawingState();
             initCanvas();
             updateUI();
@@ -631,10 +628,10 @@
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
             else if (currentMode === 'word') currentSet = charSets.word;
-            else if (currentMode === 'word_limited') currentSet = dynamicWordSet;
             
-            if (currentSet && currentSet.length > 0) {
-                currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
+            currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
+            if (currentIndex < 0) {
+                currentIndex = currentSet.length - 1;
             }
             resetDrawingState();
             initCanvas();
@@ -661,7 +658,7 @@
         
         initializeSpeechSynth().then(() => {
             console.log("Speech synthesis ready.");
-            generateAllCombinations();
+            // generateAllCombinations() 함수는 이제 호출하지 않습니다.
         });
 
         window.addEventListener('resize', initCanvas);
