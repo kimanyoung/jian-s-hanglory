@@ -23,6 +23,7 @@
             flex-direction: column;
             overflow: hidden;
             color: #5d4037;
+            box-sizing: border-box; /* 추가: 패딩과 보더가 크기에 포함되도록 */
         }
 
         #app-container {
@@ -198,8 +199,8 @@
             width: 90vw;
             max-width: 650px;
             box-sizing: border-box;
-            flex-shrink: 0; /* 버튼이 줄어들지 않도록 설정 */
-            margin-top: auto; /* 화면 하단에 고정 */
+            flex-shrink: 0;
+            margin-top: auto;
         }
 
         .nav-btn, #back-btn {
@@ -458,7 +459,6 @@
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
-            
             switchPage('learning');
             setTimeout(() => {
                 initCanvas();
@@ -501,9 +501,15 @@
                 }
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
-                charToDisplay = currentSet[currentIndex];
-                currentTitle.textContent = `${charToDisplay} 쓰기`;
-                guideChar.textContent = charToDisplay;
+                if (dynamicWordSet.length > 0) {
+                     charToDisplay = currentSet[currentIndex];
+                     currentTitle.textContent = `${charToDisplay} 쓰기`;
+                     guideChar.textContent = charToDisplay;
+                } else {
+                     charToDisplay = '';
+                     currentTitle.textContent = '글자가 없습니다.';
+                     guideChar.textContent = '';
+                }
                 wordInfo.style.opacity = 0;
             }
 
@@ -533,8 +539,7 @@
             } else if (currentMode === 'word_limited') {
                 currentSet = dynamicWordSet;
             }
-
-            if (currentSet) {
+            if (currentSet && currentSet.length > 0) {
                 currentSet.forEach((char, index) => {
                     const button = document.createElement('button');
                     button.textContent = char;
