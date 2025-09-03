@@ -259,6 +259,7 @@
             opacity: 0;
             transition: opacity 0.5s;
             box-sizing: border-box;
+            max-width: 100%; /* 단어가 짤리지 않도록 */
         }
 
         #word-image {
@@ -277,6 +278,9 @@
             font-weight: bold;
             color: #d2691e;
             cursor: pointer;
+            white-space: nowrap; /* 글자가 줄바꿈되지 않도록 */
+            overflow: hidden; /* 넘치는 부분 숨기기 */
+            text-overflow: ellipsis; /* ...으로 표시 */
         }
 
         @keyframes fadeIn {
@@ -289,6 +293,60 @@
             70% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
+
+        /* 가로모드 (Landscape)용 CSS */
+        @media (orientation: landscape) {
+            #learning-page {
+                flex-direction: row; /* 가로로 배치 */
+                justify-content: center;
+                align-items: flex-start;
+                padding: 10px;
+            }
+            #learning-page h2 {
+                position: absolute;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 4vw;
+            }
+            #drawing-area {
+                margin: 0;
+                width: 50vw;
+                height: 80vh;
+                max-width: 500px;
+                max-height: 500px;
+            }
+            #char-list-container {
+                margin: 0 10px;
+                flex-direction: column;
+                flex-wrap: nowrap;
+                height: 80vh;
+                max-height: 500px;
+                max-width: 100px;
+            }
+            .char-list-btn {
+                font-size: 2vw;
+            }
+            .navigation-buttons {
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: auto;
+                max-width: none;
+            }
+            #word-info {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                transform: none;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                opacity: 0;
+            }
+        }
+
 
         @media (min-width: 768px) {
             #start-page h1 { font-size: 60px; }
@@ -316,7 +374,6 @@
         <div id="learning-page">
             <h2 id="current-title">자음 배우기</h2>
             <div id="drawing-area">
-                <div id="start-overlay">터치해서 시작하기</div>
                 <div id="guide-char"></div>
                 <canvas id="drawing-canvas"></canvas>
             </div>
@@ -358,8 +415,6 @@
         let lastX = 0;
         let lastY = 0;
         let speechSynthInitialized = false;
-
-        const HANGUL_START_CODE = 0xac00;
 
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
         const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
@@ -456,13 +511,13 @@
         function setupLearning(mode) {
             currentMode = mode;
             currentIndex = 0;
-            isAudioEnabled = false; // 초기에는 소리 비활성화
+            isAudioEnabled = false;
             switchPage('learning');
             setTimeout(() => {
                 initCanvas();
                 renderCharList();
                 updateUI();
-                startOverlay.style.display = 'flex'; // 오버레이 표시
+                startOverlay.style.display = 'flex';
             }, 100);
         }
 
@@ -508,18 +563,19 @@
                 activeBtn.classList.add('active');
             }
 
-            if (charToDisplay && isAudioEnabled) { // isAudioEnabled일 때만 소리 재생
+            if (charToDisplay && isAudioEnabled) {
                 playSound(charToDisplay);
             }
         }
         
         function handleOverlayClick() {
             startOverlay.style.display = 'none';
-            isAudioEnabled = true; // 소리 활성화
-            updateUI(); // 소리 재생 및 UI 업데이트
+            isAudioEnabled = true;
+            updateUI();
         }
         startOverlay.addEventListener('click', handleOverlayClick);
         startOverlay.addEventListener('touchstart', handleOverlayClick);
+
 
         function renderCharList() {
             charListContainer.innerHTML = '';
