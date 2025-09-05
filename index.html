@@ -94,7 +94,8 @@
 
         #consonant-btn { background-color: #ff8e72; }
         #vowel-btn { background-color: #72c3ff; }
-        #word-btn { background-color: #a788ff; }
+        #word-btn-examples { background-color: #a788ff; }
+        #word-btn-full { background-color: #88a7ff; }
 
         #learning-page {
             display: none;
@@ -314,12 +315,14 @@
             <img id="character" src="https://em-content.zobj.net/source/apple/354/unicorn_1f984.png" alt="한글 요정">
             <button id="consonant-btn" class="menu-button">자음 배우기</button>
             <button id="vowel-btn" class="menu-button">모음 배우기</button>
-            <button id="word-btn" class="menu-button">글자 배우기</button>
+            <button id="word-btn-examples" class="menu-button">글자 (단어 예시)</button>
+            <button id="word-btn-full" class="menu-button">글자 (전체 글자)</button>
         </div>
 
         <div id="learning-page">
             <h2 id="current-title">자음 배우기</h2>
             <div id="drawing-area">
+                <div id="start-overlay">터치해서 시작하기</div>
                 <div id="guide-char"></div>
                 <canvas id="drawing-canvas"></canvas>
             </div>
@@ -342,7 +345,8 @@
         const learningPage = document.getElementById('learning-page');
         const consonantBtn = document.getElementById('consonant-btn');
         const vowelBtn = document.getElementById('vowel-btn');
-        const wordBtn = document.getElementById('word-btn');
+        const wordBtnExamples = document.getElementById('word-btn-examples');
+        const wordBtnFull = document.getElementById('word-btn-full');
         const currentTitle = document.getElementById('current-title');
         const guideChar = document.getElementById('guide-char');
         const canvas = document.getElementById('drawing-canvas');
@@ -366,26 +370,21 @@
         const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
         
         const wordWithExamples = [
-            { char: '가', word: '가방' }, { char: '갸', word: '갸웃' }, { char: '거', word: '거미' }, { char: '겨', word: '겨울' }, { char: '고', word: '고구마' }, { char: '교', word: '교실' }, { char: '구', word: '구름' }, { char: '규', word: '규칙' }, { char: '그', word: '그림' }, { char: '기', word: '기차' },
-            { char: '나', word: '나비' }, { char: '냐', word: '안녕' }, { char: '너', word: '너구리' }, { char: '녀', word: '여자' }, { char: '노', word: '노래' }, { char: '뇨', word: '토뇨' }, { char: '누', word: '누나' }, { char: '뉴', word: '뉴스' }, { char: '느', word: '느티나무' }, { char: '니', word: '누가니' },
-            { char: '다', word: '다리미' }, { char: '댜', word: '댜갸댜' }, { char: '더', word: '더하기' }, { char: '뎌', word: '뎌뎌' }, { char: '도', word: '도토리' }, { char: '됴', word: '됴됴' }, { char: '두', word: '두부' }, { char: '듀', word: '인터뷰' }, { char: '드', word: '드럼' }, { char: '디', word: '디지털' },
-            { char: '라', word: '라면' }, { char: '랴', word: '랴랴' }, { char: '러', word: '러시아' }, { char: '려', word: '려' }, { char: '로', word: '로봇' }, { char: '료', word: '요리' }, { char: '루', word: '루비' }, { char: '류', word: '종류' }, { char: '르', word: '마르' }, { char: '리', word: '리본' },
-            { char: '마', word: '마스크' }, { char: '먀', word: '먀' }, { char: '머', word: '머리' }, { char: '며', word: '몇' }, { char: '모', word: '모자' }, { char: '묘', word: '묘지' }, { char: '무', word: '무궁화' }, { char: '뮤', word: '뮤지컬' }, { char: '므', word: '므흣' }, { char: '미', word: '미술' },
-            { char: '바', word: '바나나' }, { char: '뱌', word: '뱌' }, { char: '버', word: '버스' }, { char: '벼', word: '벼' }, { char: '보', word: '보석' }, { char: '뵤', word: '뵤뵤' }, { char: '부', word: '부모' }, { char: '뷰', word: '뷰티' }, { char: '브', word: '브이' }, { char: '비', word: '비누' },
-            { char: '사', word: '사과' }, { char: '샤', word: '샤워' }, { char: '서', word: '서울' }, { char: '셔', word: '셔틀버스' }, { char: '소', word: '소나무' }, { char: '쇼', word: '쇼핑' }, { char: '수', word: '수박' }, { char: '슈', word: '슈크림' }, { char: '스', word: '스키' }, { char: '시', word: '시간' },
-            { char: '아', word: '아기' }, { char: '야', word: '야옹이' }, { char: '어', word: '어머니' }, { char: '여', word: '여자' }, { char: '오', word: '오이' }, { char: '요', word: '요가' }, { char: '우', word: '우산' }, { char: '유', word: '유치원' }, { char: '으', word: '으음' }, { char: '이', word: '이사' },
-            { char: '자', word: '자전거' }, { char: '쟈', word: '쟈기' }, { char: '저', word: '저기' }, { char: '져', word: '져지' }, { char: '조', word: '조개' }, { char: '죠', word: '죠리퐁' }, { char: '주', word: '주스' }, { char: '쥬', word: '쥬얼리' }, { char: '즈', word: '보너스' }, { char: '지', word: '지도' },
-            { char: '차', word: '자동차' }, { char: '챠', word: '챠오' }, { char: '처', word: '처음' }, { char: '쳐', word: '쳐다보다' }, { char: '초', word: '초콜릿' }, { char: '쵸', word: '쵸파' }, { char: '추', word: '축구' }, { char: '츄', word: '츄츄' }, { char: '츠', word: '츠쿠바' }, { char: '치', word: '치약' },
-            { char: '카', word: '카메라' }, { char: '캬', word: '캬바레' }, { char: '커', word: '커피' }, { char: '켜', word: '켜다' }, { char: '코', word: '코끼리' }, { char: '쿄', word: '쿄쿄' }, { char: '쿠', word: '쿠키' }, { char: '큐', word: '큐브' }, { char: '크', word: '크림' }, { char: '키', word: '키보드' },
-            { char: '타', word: '타조' }, { char: '탸', word: '탸' }, { char: '터', word: '터널' }, { char: '텨', word: '텨' }, { char: '토', word: '토끼' }, { char: '툐', word: '툐툐' }, { char: '투', word: '투명' }, { char: '튜', word: '튜립' }, { char: '트', word: '트럭' }, { char: '티', word: '티라미수' },
-            { char: '파', word: '파도' }, { char: '퍄', word: '퍄퍄' }, { char: '퍼', word: '퍼즐' }, { char: '펴', word: '펴다' }, { char: '포', word: '포도' }, { char: '표', word: '표정' }, { char: '푸', word: '푸딩' }, { char: '퓨', word: '퓨전' }, { char: '프', word: '프라이팬' }, { char: '피', word: '피아노' },
-            { char: '하', word: '하마' }, { char: '햐', word: '햐' }, { char: '허', word: '허리' }, { char: '혀', word: '혀' }, { char: '호', word: '호랑이' }, { char: '효', word: '효과' }, { char: '후', word: '후식' }, { char: '휴', word: '휴지' }, { char: '흐', word: '흐르다' }, { char: '히', word: '히터' }
+            { char: '가', word: '가방', img: 'https://cdn.pixabay.com/photo/2016/09/16/17/33/bag-1674482_1280.png' },
+            { char: '나', word: '나비', img: 'https://cdn.pixabay.com/photo/2016/08/17/23/04/butterfly-1601666_1280.png' },
+            { char: '다', word: '다리미', img: 'https://cdn.pixabay.com/photo/2017/04/04/18/14/bridge-2202271_1280.png' },
+            { char: '라', word: '라면', img: 'https://cdn.pixabay.com/photo/2020/05/20/09/27/noodle-5196328_1280.png' }
+        ];
+
+        const wordFullSet = [
+            '가', '갸', '거', '겨', '고', '교', '구', '규', '그', '기', '나', '냐', '너', '녀', '노', '뇨', '누', '뉴', '느', '니', '다', '댜', '더', '뎌', '도', '됴', '두', '듀', '드', '디', '라', '랴', '러', '려', '로', '료', '루', '류', '르', '리', '마', '먀', '머', '며', '모', '묘', '무', '뮤', '므', '미', '바', '뱌', '버', '벼', '보', '뵤', '부', '뷰', '브', '비', '사', '샤', '서', '셔', '소', '쇼', '수', '슈', '스', '시', '아', '야', '어', '여', '오', '요', '우', '유', '으', '이', '자', '쟈', '저', '져', '조', '죠', '주', '쥬', '즈', '지', '차', '챠', '처', '쳐', '초', '쵸', '추', '츄', '츠', '치', '카', '캬', '커', '켜', '코', '쿄', '쿠', '큐', '크', '키', '타', '탸', '터', '텨', '토', '툐', '투', '튜', '트', '티', '파', '퍄', '퍼', '펴', '포', '표', '푸', '퓨', '프', '피', '하', '햐', '허', '혀', '호', '효', '후', '휴', '흐', '히'
         ];
 
         const charSets = {
             consonant: consonants,
             vowel: vowels,
-            word: wordWithExamples
+            word_examples: wordWithExamples,
+            word_full: wordFullSet
         };
 
         let currentMode = '';
@@ -483,14 +482,14 @@
                 currentTitle.textContent = `${charToDisplay} 배우기`;
                 guideChar.textContent = charToDisplay;
                 wordInfo.style.opacity = 0;
-            } else if (currentMode === 'word') {
-                currentSet = charSets.word;
+            } else if (currentMode === 'word_examples') {
+                currentSet = charSets.word_examples;
                 const currentData = currentSet[currentIndex];
                 if (currentData) {
                     charToDisplay = currentData.char;
                     currentTitle.textContent = `${charToDisplay} 쓰기`;
                     guideChar.textContent = charToDisplay;
-                    wordImage.src = '';
+                    wordImage.src = currentData.img;
                     wordText.textContent = currentData.word;
                     wordInfo.style.opacity = 1;
                 } else {
@@ -499,6 +498,18 @@
                     guideChar.textContent = '';
                     wordInfo.style.opacity = 0;
                 }
+            } else if (currentMode === 'word_full') {
+                currentSet = charSets.word_full;
+                if (currentSet && currentSet.length > 0) {
+                     charToDisplay = currentSet[currentIndex];
+                     currentTitle.textContent = `${charToDisplay} 쓰기`;
+                     guideChar.textContent = charToDisplay;
+                } else {
+                     charToDisplay = '';
+                     currentTitle.textContent = '글자가 없습니다.';
+                     guideChar.textContent = '';
+                }
+                wordInfo.style.opacity = 0;
             }
 
             document.querySelectorAll('.char-list-btn').forEach(button => {
@@ -520,7 +531,6 @@
             updateUI();
         }
         
-        // 오버레이가 이미 HTML에 있으므로, 이벤트 리스너만 추가
         startOverlay.addEventListener('click', handleOverlayClick);
         startOverlay.addEventListener('touchstart', handleOverlayClick);
 
@@ -532,8 +542,10 @@
                 currentSet = charSets.consonant;
             } else if (currentMode === 'vowel') {
                 currentSet = charSets.vowel;
-            } else if (currentMode === 'word') {
-                currentSet = charSets.word.map(item => item.char);
+            } else if (currentMode === 'word_examples') {
+                currentSet = charSets.word_examples.map(item => item.char);
+            } else if (currentMode === 'word_full') {
+                currentSet = charSets.word_full;
             }
 
             if (currentSet && currentSet.length > 0) {
@@ -618,14 +630,16 @@
 
         consonantBtn.addEventListener('click', () => setupLearning('consonant'));
         vowelBtn.addEventListener('click', () => setupLearning('vowel'));
-        wordBtn.addEventListener('click', () => setupLearning('word'));
+        wordBtnExamples.addEventListener('click', () => setupLearning('word_examples'));
+        wordBtnFull.addEventListener('click', () => setupLearning('word_full'));
         backBtn.addEventListener('click', () => switchPage('start'));
 
         nextBtn.addEventListener('click', () => {
             let currentSet;
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
-            else if (currentMode === 'word') currentSet = charSets.word;
+            else if (currentMode === 'word_examples') currentSet = charSets.word_examples;
+            else if (currentMode === 'word_full') currentSet = charSets.word_full;
             
             currentIndex = (currentIndex + 1) % currentSet.length;
             resetDrawingState();
@@ -637,7 +651,8 @@
             let currentSet;
             if (currentMode === 'consonant') currentSet = charSets.consonant;
             else if (currentMode === 'vowel') currentSet = charSets.vowel;
-            else if (currentMode === 'word') currentSet = charSets.word;
+            else if (currentMode === 'word_examples') currentSet = charSets.word_examples;
+            else if (currentMode === 'word_full') currentSet = charSets.word_full;
             
             currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
             if (currentIndex < 0) {
@@ -649,8 +664,8 @@
         });
 
         wordImage.addEventListener('click', () => {
-            if (currentMode === 'word') {
-                const currentData = charSets.word[currentIndex];
+            if (currentMode === 'word_examples') {
+                const currentData = charSets.word_examples[currentIndex];
                 if (currentData) {
                     playSound(currentData.word);
                 }
@@ -658,8 +673,8 @@
         });
 
         wordText.addEventListener('click', () => {
-            if (currentMode === 'word') {
-                const currentData = charSets.word[currentIndex];
+            if (currentMode === 'word_examples') {
+                const currentData = charSets.word_examples[currentIndex];
                 if (currentData) {
                     playSound(currentData.word);
                 }
