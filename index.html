@@ -165,7 +165,7 @@
             height: 100%;
             background-color: rgba(255, 255, 255, 0.7);
             z-index: 50;
-            display: none; /* 초기에는 숨김 */
+            display: none;
             justify-content: center;
             align-items: center;
             cursor: pointer;
@@ -320,9 +320,12 @@
         <div id="learning-page">
             <h2 id="current-title">자음 배우기</h2>
             <div id="drawing-area">
-                <div id="start-overlay">터치해서 시작하기</div>
                 <div id="guide-char"></div>
                 <canvas id="drawing-canvas"></canvas>
+            </div>
+            <div id="word-info">
+                <img id="word-image" src="" alt="">
+                <div id="word-text"></div>
             </div>
             <div class="navigation-buttons">
                 <button id="prev-btn" class="nav-btn">이전</button>
@@ -330,10 +333,6 @@
                 <button id="back-btn">뒤로 가기</button>
             </div>
             <div id="char-list-container"></div>
-            <div id="word-info">
-                <img id="word-image" src="" alt="">
-                <div id="word-text"></div>
-            </div>
         </div>
     </div>
 
@@ -362,8 +361,6 @@
         let lastX = 0;
         let lastY = 0;
         let speechSynthInitialized = false;
-
-        const HANGUL_START_CODE = 0xac00;
 
         const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ'];
         const vowels = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
@@ -522,9 +519,10 @@
             isAudioEnabled = true;
             updateUI();
         }
+        
+        // 오버레이가 이미 HTML에 있으므로, 이벤트 리스너만 추가
         startOverlay.addEventListener('click', handleOverlayClick);
         startOverlay.addEventListener('touchstart', handleOverlayClick);
-
 
         function renderCharList() {
             charListContainer.innerHTML = '';
